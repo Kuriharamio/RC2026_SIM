@@ -76,7 +76,6 @@ tests/
 **/log/
 **/install/
 
-**.png
 **.pt
 **.hdr
 **.exr
@@ -84,3 +83,5 @@ tests/
 **.onnx
 **.pkl
 **.yaml
+textures/
+Materials/
