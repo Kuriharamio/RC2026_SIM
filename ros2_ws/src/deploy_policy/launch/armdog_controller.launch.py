@@ -9,7 +9,7 @@ import os
 def generate_launch_description():
     policy_path = os.path.join(
         get_package_share_directory('deploy_policy'),
-        'policy/policy_1/exported/policy.pt'
+        'policy/policy_rough/exported/policy.pt'
     )
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -26,8 +26,8 @@ def generate_launch_description():
             description="Use simulation (Omniverse Isaac Sim) clock if true"),
         DeclareLaunchArgument(
             "dog_type",
-            default_value="single",
-            description="Dog type: single or dual"),
+            default_value="none",
+            description="Dog type: none or single or dual"),
         Node(
             package='deploy_policy',
             executable='armdog_controller.py',
@@ -37,6 +37,7 @@ def generate_launch_description():
                 'publish_period_ms': LaunchConfiguration('publish_period_ms'),
                 'policy_path': LaunchConfiguration('policy_path'),
                 "use_sim_time": LaunchConfiguration('use_sim_time'),
+                "dog_type": LaunchConfiguration('dog_type'),
             }]
             
         ),

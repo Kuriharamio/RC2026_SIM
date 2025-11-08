@@ -19,22 +19,22 @@ TERRAINS_CFG = TerrainGeneratorCfg(
         # "flat": terrain_gen.MeshPlaneTerrainCfg(
         #     proportion=0.1
         # ),
-        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.4,
-            step_height_range=(0.05, 0.23),
-            step_width=0.3,
-            platform_width=3.0,
-            border_width=1.0,
-            holes=False,
-        ),
-        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.3,
-            step_height_range=(0.05, 0.23),
-            step_width=0.3,
-            platform_width=3.0,
-            border_width=1.0,
-            holes=False,
-        ),
+        # "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+        #     proportion=0.4,
+        #     step_height_range=(0.05, 0.23),
+        #     step_width=0.3,
+        #     platform_width=3.0,
+        #     border_width=1.0,
+        #     holes=False,
+        # ),
+        # "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+        #     proportion=0.3,
+        #     step_height_range=(0.05, 0.23),
+        #     step_width=0.3,
+        #     platform_width=3.0,
+        #     border_width=1.0,
+        #     holes=False,
+        # ),
         "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
             proportion=0.1,
             slope_range=(0.0, 0.4),
@@ -48,16 +48,16 @@ TERRAINS_CFG = TerrainGeneratorCfg(
             border_width=0.25,
         ),
         "boxes": terrain_gen.MeshRandomGridTerrainCfg(
-            proportion=0.2,
-            grid_width=0.45,
-            grid_height_range=(0.05, 0.2),
+            proportion=0.8,
+            grid_width=1.2,
+            grid_height_range=(0.05, 0.25),
             platform_width=2.0,
         ),
-        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.2, 
-            noise_range=(0.02, 0.10), 
-            noise_step=0.02, 
-            border_width=0.25
-        ),
+        # "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+        #     proportion=0.2, 
+        #     noise_range=(0.02, 0.10), 
+        #     noise_step=0.02, 
+        #     border_width=0.25
+        # ),
     },
 )

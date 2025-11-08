@@ -9,7 +9,7 @@ import isaaclab.sim as sim_utils
 
 ARMDOG_SINGLE_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path="assets/ArmDog/test.usd",
+        usd_path="assets/ArmDog/armdog_single.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

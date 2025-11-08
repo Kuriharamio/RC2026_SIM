@@ -14,31 +14,32 @@ from isaaclab_rl.rsl_rl import (
     RslRlPpoAlgorithmCfg,
 )
 
+
 @configclass
-class ArmDogRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class ArmReachPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 15000
+    max_iterations = 1000
     save_interval = 50
-    experiment_name = "armdog_basic_control_rough"
-    obs_groups = {"policy": ["privilege"]}
+    experiment_name = "arm_control_reach"
+    obs_groups = {"policy": ["policy"]}
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_obs_normalization=False,
         critic_obs_normalization=False,
-        actor_hidden_dims=[512, 256, 128],
-        critic_hidden_dims=[512, 256, 128],
+        actor_hidden_dims=[64, 64],
+        critic_hidden_dims=[64, 64],
         activation="elu",
     )
     algorithm = RslRlPpoAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.01,
+        entropy_coef=0.006,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=1e-3,
+        learning_rate=1e-4,
         schedule="adaptive",
-        gamma=0.99,
+        gamma=0.98,
         lam=0.95,
         desired_kl=0.01,
         max_grad_norm=1.0,
@@ -46,16 +47,18 @@ class ArmDogRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
-class ArmDogFlatPPORunnerCfg(ArmDogRoughPPORunnerCfg):
+class ArmLiftPPORunnerCfg(ArmReachPPORunnerCfg):
 
     obs_groups = {"policy": ["policy"]}
+
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 5000
-        self.experiment_name = "armdog_basic_control_flat"
-        self.policy.actor_hidden_dims = [128, 128, 128]
-        self.policy.critic_hidden_dims = [128, 128, 128]
+        self.max_iterations = 10000
+        self.experiment_name = "arm_control_lift"
+        self.policy.actor_hidden_dims = [256, 128, 64]
+        self.policy.critic_hidden_dims = [256, 128, 64]
+
 
 #########################
 # Student Distillation ##
@@ -63,19 +66,21 @@ class ArmDogFlatPPORunnerCfg(ArmDogRoughPPORunnerCfg):
 
 
 @configclass
-class ArmDogRoughDistillationRunnerCfg(ArmDogRoughPPORunnerCfg):
+class ArmLiftDistillationRunnerCfg(ArmReachPPORunnerCfg):
     num_steps_per_env = 24
     max_iterations = 10000
     save_interval = 100
     class_name = "DistillationRunner"
     run_name = "distillation"
 
-    obs_groups = {"policy": ["policy"], "teacher": ["privilege"], "critic": ["privilege"]}
+    obs_groups = {
+        "policy": ["distillation"],
+        "teacher": ["policy"],
+        "critic": ["policy"],
+    }
     policy = RslRlDistillationStudentTeacherRecurrentCfg(
         student_hidden_dims=[512, 256, 128],
-        teacher_hidden_dims=[512, 256, 128],
-        teacher_obs_normalization=False,
-        student_obs_normalization=False,
+        teacher_hidden_dims=[256, 128, 64],
         activation="elu",
         init_noise_std=0.1,
         class_name="StudentTeacherRecurrent",
@@ -95,7 +100,9 @@ class ArmDogRoughDistillationRunnerCfg(ArmDogRoughPPORunnerCfg):
 
     def __post_init__(self):
         super().__post_init__()
+        self.experiment_name = "arm_control_lift"
         self.max_iterations = 15000
+
 
 #########################
 # Student Fine Tuning ###
@@ -103,13 +110,11 @@ class ArmDogRoughDistillationRunnerCfg(ArmDogRoughPPORunnerCfg):
 
 
 @configclass
-class ArmDogRoughStudentPPORunnerCfg(ArmDogRoughPPORunnerCfg):
-    obs_groups = {"policy": ["policy"], "critic": ["privilege"]}
+class ArmLiftFinetunePPORunnerCfg(ArmLiftPPORunnerCfg):
+    obs_groups = {"policy": ["distillation"], "critic": ["policy"]}
     policy = RslRlPpoActorCriticRecurrentCfg(
         class_name="ActorCriticRecurrent",
-        init_noise_std=0.1,
-        actor_obs_normalization=False,
-        critic_obs_normalization=False,
+        init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
@@ -121,4 +126,5 @@ class ArmDogRoughStudentPPORunnerCfg(ArmDogRoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
         self.max_iterations = 15000
+        self.experiment_name = "arm_control_lift"
         self.run_name = "student_finetune"

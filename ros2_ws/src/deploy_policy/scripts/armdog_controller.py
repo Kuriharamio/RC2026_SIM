@@ -16,8 +16,10 @@ class ArmDogController(Node):
 
         self.declare_parameter('publish_period_ms', 5)
         self.declare_parameter('policy_path', 'policy/policy_1/exported/policy.pt')
-        self.declare_parameter('dog_type', 'single')
+        self.declare_parameter('dog_type', 'none')
         self.set_parameters([rclpy.parameter.Parameter('use_sim_time', rclpy.Parameter.Type.BOOL, True)])
+
+        self.dog_type = self.get_parameter('dog_type').get_parameter_value().string_value
 
         self._logger = self.get_logger()
 
@@ -28,9 +30,9 @@ class ArmDogController(Node):
         )
 
         self._cmd_vel_subscription = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_callback, 10)
-        self._joint_publisher = self.create_publisher(JointState, 'joint_command', sim_qos_profile)
-        self._imu_sub_filter = Subscriber(self, Imu, 'imu', qos_profile=sim_qos_profile)
-        self._joint_states_sub_filter = Subscriber(self, JointState, 'joint_states', qos_profile=sim_qos_profile)
+        self._joint_publisher = self.create_publisher(JointState, f'joint_command_{self.dog_type}', sim_qos_profile)
+        self._imu_sub_filter = Subscriber(self, Imu, f'imu_{self.dog_type}', qos_profile=sim_qos_profile)
+        self._joint_states_sub_filter = Subscriber(self, JointState, f'joint_states_{self.dog_type}', qos_profile=sim_qos_profile)
 
         queue_size = 10
         subscribers = [self._joint_states_sub_filter, self._imu_sub_filter]
@@ -40,26 +42,38 @@ class ArmDogController(Node):
         self.policy_path = self.get_parameter('policy_path').get_parameter_value().string_value
         self.load_policy()
 
-        self.dog_type = self.get_parameter('dog_type').get_parameter_value().string_value
-
         self._joint_state = JointState()
         self._joint_command = JointState()
         self._cmd_vel = Twist()
         self._imu = Imu()
 
-        self._action_scale = 0.25
-        if self.dog_type == 'single':
-            self._previous_action = np.zeros(18)
-        elif self.dog_type == 'dual':
-            self._previous_action = np.zeros(24)
         self._policy_counter = 0
-        self._decimation = 1
+        self._decimation = 4
         self._last_tick_time = self.get_clock().now().nanoseconds * 1e-9
         self.base_lin_vel = np.zeros(3)
         self._dt = 0.0
 
-
-        if self.dog_type == 'signle':
+        if self.dog_type == 'none':
+            self.default_pos = np.array([
+                0.1, -0.1, 0.1, -0.1, 
+                0.8, 0.8, 1.0, 1.0,
+                -1.5, -1.5, -1.5, -1.5,
+            ])
+            self.joint_names = [
+                "FL_hip_joint",
+                "FR_hip_joint",
+                "RL_hip_joint",
+                "RR_hip_joint",
+                "FL_thigh_joint",
+                "FR_thigh_joint",
+                "RL_thigh_joint",
+                "RR_thigh_joint",
+                "FL_calf_joint",
+                "FR_calf_joint",
+                "RL_calf_joint",
+                "RR_calf_joint",
+            ]
+        elif self.dog_type == 'single':
             self.default_pos = np.array([
                 0.1, -0.1, 0.1, -0.1, 
                 0.8, 0.8, 1.0, 1.0,
@@ -129,6 +143,10 @@ class ArmDogController(Node):
                 "back_gripper"
             ]
 
+        self.action_length = len(self.default_pos)
+        self._action_scale = 0.25
+        self._previous_action = np.zeros(self.action_length)
+
         self._logger.info("ArmDogController initialized")
 
     def load_policy(self):
@@ -141,6 +159,7 @@ class ArmDogController(Node):
 
     def cmd_vel_callback(self, msg):
         self._cmd_vel = msg
+        self._logger.info(f"Received cmd_vel: {msg.linear.x}, {msg.linear.y}, {msg.angular.z}")
 
     def synchronized_callback(self, joint_state: JointState, imu):
         # Reset if time jumped backwards (most likely due to sim time reset)
@@ -162,7 +181,7 @@ class ArmDogController(Node):
         self._joint_command.name = self.joint_names
 
         # Compute final joint positions by adding scaled actions to default positions
-        action_pos = self.default_pos + self.action * self._action_scale
+        action_pos = self.default_pos + np.clip(self.action, -10.0, 10.0) * self._action_scale
         # action_pos[8:10], action_pos[14:24] = np.zeros(2), np.zeros(10)
         self._joint_command.position = action_pos.tolist()
         self._joint_command.velocity = np.zeros(len(self.joint_names)).tolist()
@@ -205,20 +224,25 @@ class ArmDogController(Node):
         )
 
         # Initialize observation vector
-        if self.dog_type == 'single':
-            obs = np.zeros(66)
-        elif self.dog_type == 'dual':
-            obs = np.zeros(84)
+        obs = np.zeros(3 + 3 + 3 + 3 + self.action_length*3)
 
+        idx = 0
         # Fill observation vector components:
         # Base linear velocity (3)
-        obs[:3] = self.base_lin_vel
+        obs[idx : idx + 3] = self.base_lin_vel
+        idx += 3
 
         # Base angular velocity (3)
-        obs[3:6] = base_ang_vel
+        obs[idx : idx + 3] = base_ang_vel
+        idx += 3
+
+        # # Base linear acceleration (3)
+        # obs[idx : idx + 3] = lin_acc_b
+        # idx += 3
 
         # Gravity direction (3)
-        obs[6:9] = projected_gravity
+        obs[idx:idx+3] = projected_gravity
+        idx += 3
 
         # Velocity commands (3)
         velocity_commands = [
@@ -226,40 +250,31 @@ class ArmDogController(Node):
             self._cmd_vel.linear.y,
             self._cmd_vel.angular.z,
         ]
-        obs[9:12] = np.array(velocity_commands)
+        obs[idx:idx+3] = np.array(velocity_commands)
+        idx += 3
 
         # Joint states (19 positions + 19 velocities)
-        if self.dog_type == 'single':
-            joint_pos = np.zeros(18)
-            joint_vel = np.zeros(18)
-        elif self.dog_type == 'dual':
-            joint_pos = np.zeros(24)
-            joint_vel = np.zeros(24)
+        joint_pos = np.zeros(self.action_length)
+        joint_vel = np.zeros(self.action_length)
 
         # Map joint states from message to our ordered arrays
         for i, name in enumerate(self.joint_names):
             if name in joint_state.name:
-                idx = joint_state.name.index(name)
-                joint_pos[i] = joint_state.position[idx]
-                joint_vel[i] = joint_state.velocity[idx]
+                joint_idx = joint_state.name.index(name)
+                joint_pos[i] = joint_state.position[joint_idx]
+                joint_vel[i] = joint_state.velocity[joint_idx]
 
         # Store joint positions relative to default pose
-        if self.dog_type == 'single':
-            obs[12:30] = joint_pos - self.default_pos
-        elif self.dog_type == 'dual':
-            obs[12:36] = joint_pos - self.default_pos
+        obs[idx : idx + self.action_length] = joint_pos - self.default_pos
+        idx += self.action_length
 
         # Store joint velocities
-        if self.dog_type == 'single':
-            obs[30:48] = joint_vel
-        elif self.dog_type == 'dual':
-            obs[36:60] = joint_vel
+        obs[idx : idx + self.action_length] = joint_vel
+        idx += self.action_length
 
         # Store previous actions
-        if self.dog_type == 'single':
-            obs[48:66] = self._previous_action
-        elif self.dog_type == 'dual':
-            obs[60:84] = self._previous_action
+        obs[idx : idx + self.action_length] = np.clip(self._previous_action, -50.0, 50.0)
+        idx += self.action_length
 
         return obs
 
@@ -267,7 +282,10 @@ class ArmDogController(Node):
         # Run inference with the PyTorch policy
         with torch.no_grad():
             obs = torch.from_numpy(obs).view(1, -1).float()
+            # print(obs.shape)
             action = self.policy(obs).detach().view(-1).numpy()
+            # print(action.shape)
+            # print(action)
         return action
 
     def forward(self, joint_state: JointState, imu: Imu):

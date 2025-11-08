@@ -15,12 +15,21 @@ import torch
 from typing import TYPE_CHECKING
 
 from isaaclab.envs import mdp
-from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import ManagerTermBase, SceneEntityCfg
 from isaaclab.sensors import ContactSensor
-from isaaclab.utils.math import quat_apply_inverse, yaw_quat
+from isaaclab.assets import Articulation
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
+    from isaaclab.managers import RewardTermCfg
+
+
+def action_rate_l2_clip(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize the rate of change of the actions using L2 squared kernel."""
+    action_rate = torch.sum(torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1)
+    action_rate = torch.clip(action_rate, min=0.0, max=50.0)
+    # print("action_rate: ", action_rate)
+    return action_rate
 
 
 def feet_air_time(
@@ -44,29 +53,6 @@ def feet_air_time(
     reward *= torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1) > 0.1
     return reward
 
-
-def feet_air_time_positive_biped(env, command_name: str, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Reward long steps taken by the feet for bipeds.
-
-    This function rewards the agent for taking steps up to a specified threshold and also keep one foot at
-    a time in the air.
-
-    If the commands are small (i.e. the agent is not supposed to take a step), then the reward is zero.
-    """
-    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
-    # compute the reward
-    air_time = contact_sensor.data.current_air_time[:, sensor_cfg.body_ids]
-    contact_time = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids]
-    in_contact = contact_time > 0.0
-    in_mode_time = torch.where(in_contact, contact_time, air_time)
-    single_stance = torch.sum(in_contact.int(), dim=1) == 1
-    reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, 0.0), dim=1)[0]
-    reward = torch.clamp(reward, max=threshold)
-    # no reward for zero command
-    reward *= torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1) > 0.1
-    return reward
-
-
 def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Penalize feet sliding.
 
@@ -83,134 +69,88 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     reward = torch.sum(body_vel.norm(dim=-1) * contacts, dim=1)
     return reward
 
-
-def track_lin_vel_xy_yaw_frame_exp(
-    env, std: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
-    """Reward tracking of linear velocity commands (xy axes) in the gravity aligned robot frame using exponential kernel."""
-    # extract the used quantities (to enable type-hinting)
-    asset = env.scene[asset_cfg.name]
-    vel_yaw = quat_apply_inverse(yaw_quat(asset.data.root_quat_w), asset.data.root_lin_vel_w[:, :3])
-    lin_vel_error = torch.sum(
-        torch.square(env.command_manager.get_command(command_name)[:, :2] - vel_yaw[:, :2]), dim=1
+def feet_stumble(env, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    net_contact_forces = contact_sensor.data.net_forces_w_history[:, 0, sensor_cfg.body_ids]
+    rew = torch.any(
+        torch.norm(net_contact_forces[:, :, :2], dim=2)
+        > 4 * torch.abs(net_contact_forces[:, :, 2]),
+        dim=1,
     )
-    return torch.exp(-lin_vel_error / std**2)
+    return rew.float()
 
-
-def track_ang_vel_z_world_exp(
-    env, command_name: str, std: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
-    """Reward tracking of angular velocity commands (yaw) in world frame using exponential kernel."""
-    # extract the used quantities (to enable type-hinting)
-    asset = env.scene[asset_cfg.name]
-    ang_vel_error = torch.square(env.command_manager.get_command(command_name)[:, 2] - asset.data.root_ang_vel_w[:, 2])
-    return torch.exp(-ang_vel_error / std**2)
-
-
-def stand_still_joint_deviation_l1(
-    env, command_name: str, command_threshold: float = 0.06, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
-    """Penalize offsets from the default joint positions when the command is very small."""
-    command = env.command_manager.get_command(command_name)
-    # Penalize motion when command is nearly zero.
-    return mdp.joint_deviation_l1(env, asset_cfg) * (torch.norm(command[:, :2], dim=1) < command_threshold)
-
-
-def base_height_penalty(
+def feet_edge_penalty(
     env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    min_height: float = 0.2
+    threshold: float = 3.0,
+    terrain_level_threshold: int = 3,
 ) -> torch.Tensor:
-    """Penalize the robot for having its base too close to the ground (crawling behavior).
+    """惩罚足部与地形边缘接触，鼓励足部放置在稳定的地面上"""
+    # 提取接触传感器和机器人资产
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    robot = env.scene[asset_cfg.name]
+    # 获取世界坐标系中的足部位置
+    feet_pos_w = robot.data.body_pos_w[ :, sensor_cfg.body_ids, :2]  # (num_envs, num_feet, 2)
+    # 获取足部的接触信息
+    feet_contact = (contact_sensor.data.net_forces_w.norm(dim=-1)[:, sensor_cfg.body_ids] > 0.1)  # (num_envs, num_feet)
 
-    This function penalizes the agent when the robot's base height is below a threshold,
-    which helps prevent the robot from learning to crawl on its belly instead of walking.
+    # 在粗糙地形中，我们检查足部是否靠近边缘
+    if env.scene.terrain.terrain_types is not "plane":
+        # 计算足部位置的分散度以确定是否处于边缘
+        feet_center = torch.mean(feet_pos_w, dim=1, keepdim=True)  # (num_envs, 1, 2)
+        feet_spread = torch.std(feet_pos_w, dim=1)  # (num_envs, 2)
 
-    Args:
-        env: The environment instance.
-        asset_cfg: Configuration for the robot asset.
-        min_height: Minimum allowed height for the robot base.
-        penalty_weight: Scaling factor for the penalty.
+        # 基于位置方差的简单边缘检测
+        # 当足部处于边缘时，它们的位置分布往往更加分散
+        edge_indicator = torch.norm(feet_spread, dim=1)  # (num_envs,)
 
-    Returns:
-        A tensor of penalty values for each environment.
-    """
-    # Extract the robot asset
-    asset = env.scene[asset_cfg.name]
+        # 根据边缘指示器和接触状态应用惩罚
+        penalty = torch.sum(feet_contact.float(), dim=1) * edge_indicator
 
-    # Get the base height (z-coordinate of the base)
-    base_height = asset.data.root_pos_w[:, 2]
+        # 仅对较高难度的地形应用惩罚
+        # self.terrain_levels = torch.randint(0, max_init_level + 1, (num_envs,), device=self.device)
+        terrain_difficulty = env.scene.terrain.terrain_levels
+        # 仅在地形难度高于阈值时应用惩罚
+        terrain_mask = terrain_difficulty > terrain_level_threshold
 
-    # Calculate penalty for heights below the minimum
-    # Penalty is positive when height is below threshold, zero otherwise
-    penalty = torch.clamp(min_height - base_height, min=0.0)
+        return penalty * terrain_mask
 
-    return penalty
+    else:
+        return torch.zeros(env.num_envs, device=env.device)
 
+# class feet_edge(ManagerTermBase):
+#     def __init__(self, cfg: RewardTermCfg, env):
+#         super().__init__(cfg, env)
+#         self.contact_sensor: ContactSensor = env.scene.sensors[cfg.params["sensor_cfg"].name]
+#         self.asset: Articulation = env.scene[cfg.params["asset_cfg"].name]
+#         self.sensor_cfg = cfg.params["sensor_cfg"]
+#         self.asset_cfg = cfg.params["asset_cfg"]
+#         self.body_id = self.contact_sensor.find_bodies('base')[0]
+#         self.horizontal_scale = env.scene.terrain.cfg.terrain_generator.horizontal_scale
+#         size_x, size_y = env.scene.terrain.cfg.terrain_generator.size
+#         self.rows_offset = (size_x * env.scene.terrain.cfg.terrain_generator.num_rows/2)
+#         self.cols_offset = (size_y * env.scene.terrain.cfg.terrain_generator.num_cols/2)
 
-def base_height_above_terrain(
-    env,
-    sensor_cfg: SceneEntityCfg = SceneEntityCfg("height_scanner"),
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    min_height: float = 0.20,
-) -> torch.Tensor:
-    """Penalize the robot for having its base too close to the local terrain height.
+#         self.parkour_event: ParkourEvent =  env.parkour_manager.get_term(cfg.params["parkour_name"])
+#         total_x_edge_maskes = torch.from_numpy(self.parkour_event.terrain.terrain_generator_class.x_edge_maskes).to(device = self.device)
+#         self.x_edge_masks_tensor = total_x_edge_maskes.permute(0, 2, 1, 3).reshape(
+#             env.scene.terrain.terrain_generator_class.total_width_pixels, env.scene.terrain.terrain_generator_class.total_length_pixels
+#         )
 
-    This function penalizes the agent when the robot's base height is below a threshold,
-    which helps prevent the robot from learning to crawl on its belly instead of walking.
-
-    Args:
-        env: The environment instance.
-        sensor_cfg: Configuration for the height scanner sensor.
-        asset_cfg: Configuration for the robot asset.
-        min_height: Minimum allowed height for the robot base.
-        penalty_weight: Scaling factor for the penalty.
-
-    Returns:
-        A tensor of penalty values for each environment.
-    """
-    asset = env.scene[asset_cfg.name]
-    base_z = asset.data.root_pos_w[:, 2]
-
-    # 获取 height scanner 返回的地面命中点 z
-    try:
-        scanner = env.scene.sensors[sensor_cfg.name]
-        # ray_hits_w shape: [num_envs, num_rays, 3]
-        hits_z = scanner.data.ray_hits_w[..., 2]  # [num_envs, num_rays]
-
-        if hits_z.ndim == 2:
-            # 选中心 ray 作为局部地形代表
-            center_idx = hits_z.shape[1] // 2
-            terrain_h = hits_z[:, center_idx]
-
-            # 若中心 ray 无效（inf / nan），尝试使用有效 ray 的均值
-            invalid_mask = ~torch.isfinite(terrain_h)
-            if invalid_mask.any():
-                # 使用 per-env 有效 hits 的均值作为回退值
-                valid_hits = torch.where(torch.isfinite(hits_z), hits_z, torch.nan)
-                mean_hits = torch.nanmean(valid_hits, dim=1)
-                terrain_h[invalid_mask] = mean_hits[invalid_mask]
-
-            # 如仍有无效值（极端情况），回退到 sensor 高度 - offset
-            still_invalid = ~torch.isfinite(terrain_h)
-            if still_invalid.any():
-                sensor_z = scanner.data.pos_w[:, 2]
-                # offset: 与 observations.height_scan 一致（默认 0.5）
-                offset = (
-                    getattr(sensor_cfg, "params", {}).get("offset", 0.5)
-                    if isinstance(sensor_cfg, dict)
-                    else 0.5
-                )
-                terrain_h[still_invalid] = sensor_z[still_invalid] - offset
-        else:
-            # 若只有单个 ray，直接使用它
-            terrain_h = hits_z.reshape(-1)
-            terrain_h[~torch.isfinite(terrain_h)] = 0.0
-
-    except Exception:
-        # 任何异常回退为平地（不惩罚）
-        terrain_h = torch.zeros_like(base_z)
-
-    height_above = base_z - terrain_h
-    penalty = torch.clamp(min_height - height_above, min=0.0)
-    return penalty
+#     def __call__(self, env, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+#         feet_pos_x = ((self.asset.data.body_state_w[:, self.asset_cfg.body_ids ,0] + self.rows_offset)
+#                       /self.horizontal_scale).round().long()
+#         feet_pos_y = ((self.asset.data.body_state_w[:, self.asset_cfg.body_ids ,1] + self.cols_offset)
+#                       /self.horizontal_scale).round().long()
+#         feet_pos_x = torch.clip(feet_pos_x, 0, self.x_edge_masks_tensor.shape[0]-1)
+#         feet_pos_y = torch.clip(feet_pos_y, 0, self.x_edge_masks_tensor.shape[1]-1)
+#         feet_at_edge = self.x_edge_masks_tensor[feet_pos_x, feet_pos_y]
+#         contact_forces = self.contact_sensor.data.net_forces_w_history[:, 0, self.sensor_cfg.body_ids] #(N, 4, 3)
+#         previous_contact_forces = self.contact_sensor.data.net_forces_w_history[:, -1, self.sensor_cfg.body_ids] # N, 4, 3
+#         contact = torch.norm(contact_forces, dim=-1) > 2.
+#         last_contacts = torch.norm(previous_contact_forces, dim=-1) > 2.
+#         contact_filt = torch.logical_or(contact, last_contacts)
+#         self.feet_at_edge = contact_filt & feet_at_edge
+#         rew = (self.parkour_event.terrain.terrain_levels > 3) * torch.sum(self.feet_at_edge, dim=-1)
+#         return rew

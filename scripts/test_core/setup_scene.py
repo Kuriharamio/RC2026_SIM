@@ -17,104 +17,20 @@ from isaaclab.utils import configclass
 
 from isaaclab.terrains import TerrainImporterCfg
 from Robocon2026.map.terrains import TERRAINS_CFG
+from Robocon2026.map.kfs import create_KFS
 from Robocon2026.robots.dofbot import DOFBOT_CONFIG
 from Robocon2026.robots.go2 import UNITREE_GO2_CFG
 from Robocon2026.robots.jetbot import JETBOT_CFG
-from Robocon2026.robots.armdog_dual import ARMDOG_DUAL_CFG
+from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
 from Robocon2026.utils.utils import euler2quaternion
 from isaaclab.sensors import ImuCfg, CameraCfg, ContactSensorCfg
 
 import numpy as np
 import torch
 
-def create_KFS(color):
-    kfs = []
-    if color == "red":
-        coords = np.array(
-            [
-                [-4.2, 2.2, 0.375],
-                [-3.0, 2.2, 0.575],
-                [-1.8, 2.2, 0.375],
-                [-4.2, 1.0, 0.575],
-                [-3.0, 1.0, 0.775],
-                [-1.8, 1.0, 0.575],
-                [-4.2, -0.2, 0.375],
-                [-3.0, -0.2, 0.575],
-                [-1.8, -0.2, 0.775],
-                [-4.2, -1.4, 0.575],
-                [-3.0, -1.4, 0.375],
-                [-1.8, -1.4, 0.575],
-            ]
-        )
-    elif color == "blue":
-        coords = np.array(
-            [
-                [4.2, 2.2, 0.375],
-                [3.0, 2.2, 0.575],
-                [1.8, 2.2, 0.375],
-                [4.2, 1.0, 0.575],
-                [3.0, 1.0, 0.775],
-                [1.8, 1.0, 0.575],
-                [4.2, -0.2, 0.375],
-                [3.0, -0.2, 0.575],
-                [1.8, -0.2, 0.775],
-                [4.2, -1.4, 0.575],
-                [3.0, -1.4, 0.375],
-                [1.8, -1.4, 0.575],
-            ]
-        )
-    # 任选
-    # selected_indices = np.random.choice(12, 8, replace=False)
-    # r1_indices = selected_indices[:3]
-    # r1 排除中间位置
-    while True:
-        selected_indices = np.random.choice(12, 8, replace=False)
-        r1_indices = selected_indices[:3]
-        if 4 not in r1_indices and 7 not in r1_indices:
-            break
-    fake_index = selected_indices[3]
-    r2_indices = selected_indices[4:]
-
-    for idx in r1_indices:
-        pos = coords[idx]
-        kfs.append(
-            AssetBaseCfg(
-                prim_path="{ENV_REGEX_NS}" + f"/r1_{color}_{idx}",
-                spawn=sim_utils.UsdFileCfg(usd_path=f"assets/KFS/r1_{color}.usd"),
-                init_state=AssetBaseCfg.InitialStateCfg(pos=pos),
-            )
-        )
-
-    pos = coords[fake_index]
-    kfs.append(
-        AssetBaseCfg(
-            prim_path="{ENV_REGEX_NS}" + f"/fake_{color}",
-            spawn=sim_utils.UsdFileCfg(usd_path=f"assets/KFS/fake_{color}.usd"),
-            init_state=AssetBaseCfg.InitialStateCfg(pos=pos),
-        )
-    )
-
-    used_x = set()
-    for idx in r2_indices:
-        pos = coords[idx]
-        while True:
-            x = np.random.randint(1, 16)
-            if x not in used_x:
-                used_x.add(x)
-                break
-        kfs.append(
-            AssetBaseCfg(
-                prim_path="{ENV_REGEX_NS}" + f"/r1_{color}_{idx}",
-                spawn=sim_utils.UsdFileCfg(usd_path=f"assets/KFS/r2_{color}_{x}.usd"),
-                init_state=AssetBaseCfg.InitialStateCfg(pos=pos),
-            )
-        )
-
-    return kfs
-
 @configclass
 class SceneCfg(InteractiveSceneCfg):
-    # * 创建穹顶灯光
+    #* 创建穹顶灯光
     # Domelight = AssetBaseCfg(
     #     prim_path="/World/Light",
     #     spawn=sim_utils.DomeLightCfg(
@@ -122,7 +38,7 @@ class SceneCfg(InteractiveSceneCfg):
     #         color=(0.75, 0.75, 0.75),
     #     ),
     # )
-    # * 创建远光灯
+    #* 创建远光灯
     # Distantlight = AssetBaseCfg(
     #     prim_path="/World/Light",
     #     spawn=sim_utils.DistantLightCfg(
@@ -131,7 +47,7 @@ class SceneCfg(InteractiveSceneCfg):
     #         angle=20.0,
     #     ),
     # )
-    # * 创建天空
+    #* 创建天空
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(
@@ -139,12 +55,12 @@ class SceneCfg(InteractiveSceneCfg):
             texture_file="assets/Matrials/kloofendal_43d_clear_puresky_4k.hdr",
         ),
     )
-    # * 创建 Robocon 2026 地图
+    #* 创建 Robocon 2026 地图
     Robocon2026map = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Robocon2026Map",
         spawn=sim_utils.UsdFileCfg(usd_path="assets/Map/robocon2026.usd"),
     )
-    # * 创建地形
+    #* 创建地形
     # terrain = TerrainImporterCfg(
     #     prim_path="/World/ground",
     #     terrain_type="generator",
@@ -164,21 +80,21 @@ class SceneCfg(InteractiveSceneCfg):
     #     ),
     #     debug_vis=False,
     # )
-    # * 创建 Dofbot
+    #* 创建 Dofbot
     # Dofbot = DOFBOT_CONFIG.replace(
     #     prim_path="{ENV_REGEX_NS}/Dofbot"
     # )
-    # * 创建 Go2
+    #* 创建 Go2
     # Go2 = UNITREE_GO2_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Go2"
     # )
-    # * 创建 Jetbot
+    #* 创建 Jetbot
     # Jetbot = JETBOT_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Jetbot"
     # )
 
-    # * 创建ArmDog
-    Armdog = ARMDOG_DUAL_CFG.replace(
+    #* 创建ArmDog
+    Armdog = ARMDOG_SINGLE_CFG.replace(
         prim_path="{ENV_REGEX_NS}/ArmDog",
     )
     Imu = ImuCfg(prim_path="{ENV_REGEX_NS}/ArmDog/imu", debug_vis=True)

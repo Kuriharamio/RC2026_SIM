@@ -9,7 +9,7 @@
 **/.thumbs
 
 # No USD files allowed in the repo
-# **/*.usd
+**/*.usd
 **/*.usda
 **/*.usdc
 **/*.usdz
@@ -75,3 +75,12 @@ tests/
 **/build/
 **/log/
 **/install/
+
+**.png
+**.pt
+**.hdr
+**.exr
+**.mdl
+**.onnx
+**.pkl
+**.yaml
