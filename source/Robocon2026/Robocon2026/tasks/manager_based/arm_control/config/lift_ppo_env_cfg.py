@@ -42,23 +42,23 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
                 joint_pos={
                     "shoulder_pan": 0.0,
                     "shoulder_lift": 0.0,
-                    "elbow_flex": -1.31,
-                    "wrist_flex": 1.658,
-                    "wrist_roll": 1.57,
-                    # "elbow_flex": 0.8,
-                    # "wrist_flex": -0.8,
+                    # "elbow_flex": -1.31,
+                    # "wrist_flex": 1.658,
                     # "wrist_roll": 1.57,
+                    "elbow_flex": 0.8,
+                    "wrist_flex": -0.8,
+                    "wrist_roll": 1.57,
                     "gripper": 0.3,
                 },
                 joint_vel={".*": 0.0},
             ),
         )
         self.scene.jaw_camera = None
-        self.object_height = 0.51
-        self.object_name = "spear_combine"
-        self.scale = (1.0, 1.0, 0.75)
-        # self.object_name = "cylinder"
-        # self.scale = (0.03, 0.03, 0.05)
+        self.object_height = 0.55
+        # self.object_name = "spear_combine"
+        # self.scale = (1.0, 1.0, 0.75)
+        self.object_name = "cylinder"
+        self.scale = (0.03, 0.03, 0.05)
         self.scene.target_object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
@@ -106,15 +106,18 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
         ]
 
         # * rewards
-        error_height = 0.06
+        error_height = 0.04
         self.rewards.lifting_object.params["minimal_height"] = self.object_height + error_height
-        self.rewards.object_goal_tracking.params["minimal_height"] = self.object_height + error_height
-        self.rewards.object_goal_tracking_fine_grained.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_dist.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_dist_fine_grained.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_angle.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_angle_fine_grained.params["minimal_height"] = self.object_height + error_height
         self.rewards.squeeze_object_jaw.params["minimal_height"] = self.object_height + error_height
         self.rewards.squeeze_object_gripper.params["minimal_height"] = self.object_height + error_height
         self.rewards.grab_object.weight = 100.0
         self.rewards.lifting_object.weight = 25.0
-        self.rewards.object_goal_tracking.weight = 20.0
+        self.rewards.object_goal_tracking_dist.weight = 20.0
+        self.rewards.object_goal_tracking_angle.weight = 20.0
         self.rewards.squeeze_object_jaw.weight = -1e-5
         self.rewards.squeeze_object_gripper.weight = -1e-5
 
@@ -122,8 +125,9 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
         self.observations.distillation = None
 
         # * curriculum
-        self.curriculum.action_rate.params["num_steps"] = 2400 * 4
-        self.curriculum.joint_vel.params["num_steps"] = 2400 * 4
+        self.curriculum.action_rate.params["num_steps"] = 24 * 0#3000
+        self.curriculum.joint_vel.params["num_steps"] = 24 * 0#3000
+        self.curriculum.grab_object.params["num_steps"] = 24 * 0#2000
 
         # * events
         self.events.reset_object_position.params["asset_cfg"].body_names = self.object_name

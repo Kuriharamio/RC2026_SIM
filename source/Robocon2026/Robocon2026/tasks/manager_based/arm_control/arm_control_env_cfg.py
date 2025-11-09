@@ -157,7 +157,7 @@ class ObservationsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
-        object_angles = ObsTerm(func=mdp.object_euler_angles_in_world_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
+        # object_angles = ObsTerm(func=mdp.object_euler_angles_in_world_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.02, n_max=0.02))
         actions = ObsTerm(func=mdp.last_action_check)
 
@@ -225,7 +225,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.15, 0.15), "y": (0.0, 0.2), "z": (0.0, 0.0)},
+            "pose_range": {"x": (-0.15, 0.15), "y": (0.1, 0.2), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("target_object", body_names="target_object"),
         },
@@ -236,19 +236,31 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 0.01}, weight=1.0)
+    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 0.05}, weight=1.0)
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 1.07}, weight=15.0)
 
-    object_goal_tracking = RewTerm(
+    object_goal_tracking_dist = RewTerm(
         func=mdp.object_goal_distance,
         params={"std": 0.3, "minimal_height": 1.07, "command_name": "object_pose"},
         weight=16.0,
     )
 
-    object_goal_tracking_fine_grained = RewTerm(
+    object_goal_tracking_dist_fine_grained = RewTerm(
         func=mdp.object_goal_distance,
         params={"std": 0.05, "minimal_height": 1.07, "command_name": "object_pose"},
+        weight=5.0,
+    )
+
+    object_goal_tracking_angle = RewTerm(
+        func=mdp.object_goal_angle,
+        params={"std": 1.0, "minimal_height": 1.07, "command_name": "object_pose"},
+        weight=16.0,
+    )
+
+    object_goal_tracking_angle_fine_grained = RewTerm(
+        func=mdp.object_goal_angle,
+        params={"std": 0.5, "minimal_height": 1.07, "command_name": "object_pose"},
         weight=5.0,
     )
 
@@ -365,9 +377,9 @@ class CommandsCfg:
             pos_x=(-0.1, 0.1),
             pos_y=(-0.2, -0.2),
             pos_z=(0.2, 0.35),
-            roll=(0.0, 0.0),
-            pitch=(0.0, 0.0),
-            yaw=(0.0, 0.0),
+            roll=(-0.8, 0.8),
+            pitch=(-0.8, 0.8),
+            yaw=(-1.57, -1.57),
         ),
         current_pose_visualizer_cfg=FRAME_MARKER_CFG.replace(
             prim_path="/Visuals/Command/body_pose",

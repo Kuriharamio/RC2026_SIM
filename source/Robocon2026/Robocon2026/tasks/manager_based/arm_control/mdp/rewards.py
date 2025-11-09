@@ -19,7 +19,7 @@ import torch
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer, ContactSensor
-from isaaclab.utils.math import combine_frame_transforms, matrix_from_quat
+from isaaclab.utils.math import combine_frame_transforms, matrix_from_quat, euler_xyz_from_quat
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -83,6 +83,35 @@ def object_goal_distance(
     # rewarded if the object is lifted above the threshold
     return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(distance / std))
 
+def object_goal_angle(
+    env: ManagerBasedRLEnv,
+    std: float,
+    minimal_height: float,
+    command_name: str,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Reward the agent for tracking the goal orientation using tanh-kernel."""
+    # extract the used quantities (to enable type-hinting)
+    robot: RigidObject = env.scene[robot_cfg.name]
+    object: RigidObject = env.scene[object_cfg.name]
+    command = env.command_manager.get_command(command_name)
+    # compute the desired orientation in the world frame
+    des_quat_b = command[:, 3:7]
+    _, des_quat_w = combine_frame_transforms(robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], None, des_quat_b)
+    # compute the difference between desired and current orientation
+    object_quat_w = object.data.root_quat_w
+
+    des_roll, des_pitch, des_yaw = euler_xyz_from_quat(des_quat_w)
+    object_roll, object_pitch, object_yaw = euler_xyz_from_quat(object_quat_w)
+
+    des_euler = torch.stack([des_roll, des_pitch, des_yaw], dim=1)
+    object_euler = torch.stack([object_roll, object_pitch, object_yaw], dim=1)
+
+    angle_diff = torch.norm(des_euler - object_euler, dim=1)
+
+    # rewarded if the object is lifted above the threshold
+    return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(angle_diff / std))
 
 def object_ee_distance_and_lifted(
     env: ManagerBasedRLEnv,

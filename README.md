@@ -46,6 +46,12 @@
 
 ## 使用指南
 
+### 测试地图仿真环境
+
+```bash
+python scripts/test_core/setup_scene.py
+```
+
 ### 运行任务
 
 ```bash
