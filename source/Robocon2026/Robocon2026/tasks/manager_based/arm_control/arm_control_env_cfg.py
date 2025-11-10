@@ -5,6 +5,7 @@
 
 import math
 from dataclasses import MISSING
+from pickle import FALSE
 
 from Robocon2026.tasks.manager_based.arm_control.mdp.rewards import grab_object, table_collision
 import isaaclab.sim as sim_utils
@@ -21,6 +22,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from numpy import squeeze
+from sympy import false
 
 from . import mdp
 
@@ -84,7 +86,7 @@ class ArmControlSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot/gripper",
         track_contact_points=True,
         filter_prim_paths_expr=["{ENV_REGEX_NS}/Table/weapon_table", "{ENV_REGEX_NS}/Object"],
-        debug_vis=True,
+        debug_vis=False,
         update_period=0.01,
         max_contact_data_count_per_prim=4096,
     )
@@ -92,21 +94,21 @@ class ArmControlSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot/jaw",
         track_contact_points=True,
         filter_prim_paths_expr=["{ENV_REGEX_NS}/Table/weapon_table", "{ENV_REGEX_NS}/Object"],
-        debug_vis=True,
+        debug_vis=False,
         update_period=0.01,
         max_contact_data_count_per_prim=4096,
     )
     other_contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*(base|shoulder|upper_arm|lower_arm)",
-        debug_vis=True,
+        debug_vis=False,
         update_period=0.01,
     )
 
     jaw_camera = CameraCfg(
         prim_path="{ENV_REGEX_NS}/Robot/jaw/camera",
         update_period=0.1,
-        height=480,
-        width=640,
+        height=224,
+        width=224,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0,
@@ -117,6 +119,25 @@ class ArmControlSceneCfg(InteractiveSceneCfg):
         offset=CameraCfg.OffsetCfg(
             pos=(0.0, 0.08, 0.3),
             rot=(0.185, 0.020, 0.274, 0.943),
+            convention="opengl",
+        ),
+    )
+
+    scene_camera = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/Table/camera",
+        update_period=0.1,
+        height=224,
+        width=224,
+        data_types=["rgb"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.0,
+            focus_distance=400.0,
+            horizontal_aperture=20.955,
+            clipping_range=(0.1, 1.0e5),
+        ),
+        offset=CameraCfg.OffsetCfg(
+            pos=(0.85, -0.13837, 0.36327),
+            rot=(0.622, 0.615, 0.343, 0.341),
             convention="opengl",
         ),
     )
@@ -142,7 +163,7 @@ class ActionsCfg:
         asset_name="robot",
         joint_names=["gripper"],
         open_command_expr={"gripper": 0.9},
-        close_command_expr={"gripper": 0.0},
+        close_command_expr={"gripper": -0.0},
     )
 
 
@@ -157,8 +178,8 @@ class ObservationsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
-        # object_angles = ObsTerm(func=mdp.object_euler_angles_in_world_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
-        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.02, n_max=0.02))
+        object_angles = ObsTerm(func=mdp.object_euler_angles_in_world_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
+        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.00, n_max=0.00))
         actions = ObsTerm(func=mdp.last_action_check)
 
         def __post_init__(self) -> None:
@@ -171,7 +192,7 @@ class ObservationsCfg:
 
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        img_features = ObsTerm(
+        jaw_img_features = ObsTerm(
             func=mdp.image_features,
             params={
                 "sensor_cfg": SceneEntityCfg("jaw_camera"),
@@ -179,7 +200,15 @@ class ObservationsCfg:
                 "data_type": "rgb",
             },
         )
-        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.02, n_max=0.02))
+        scene_img_features = ObsTerm(
+            func=mdp.image_features,
+            params={
+                "sensor_cfg": SceneEntityCfg("scene_camera"),
+                "model_name": "resnet18",
+                "data_type": "rgb",
+            },
+        )
+        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.0, n_max=0.0))
         actions = ObsTerm(func=mdp.last_action_check)
 
         def __post_init__(self) -> None:
@@ -372,7 +401,7 @@ class CommandsCfg:
         asset_name="robot",
         body_name=MISSING,
         resampling_time_range=(5.0, 5.0),
-        debug_vis=True,
+        debug_vis=False,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(-0.1, 0.1),
             pos_y=(-0.2, -0.2),

@@ -10,7 +10,7 @@ import random
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg
+    from local_rsl_rl.config import RslRlBaseRunnerCfg
 
 
 def add_rsl_rl_args(parser: argparse.ArgumentParser):

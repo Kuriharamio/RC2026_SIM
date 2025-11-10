@@ -79,7 +79,7 @@ class ArmLiftDistillationRunnerCfg(ArmReachPPORunnerCfg):
         "critic": ["policy"],
     }
     policy = RslRlDistillationStudentTeacherRecurrentCfg(
-        student_hidden_dims=[512, 256, 128],
+        student_hidden_dims=[256, 128, 64],
         teacher_hidden_dims=[256, 128, 64],
         activation="elu",
         init_noise_std=0.1,
@@ -91,11 +91,10 @@ class ArmLiftDistillationRunnerCfg(ArmReachPPORunnerCfg):
     )
     algorithm = RslRlDistillationAlgorithmCfg(
         num_learning_epochs=5,
-        learning_rate=1e-5,
+        learning_rate=3e-4,
         gradient_length=5,
-        max_grad_norm=0.5,
         optimizer="adam",
-        loss_type="huber",
+        loss_type="mse",
     )
 
     def __post_init__(self):

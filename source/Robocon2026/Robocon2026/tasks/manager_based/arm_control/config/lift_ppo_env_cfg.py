@@ -54,11 +54,12 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
             ),
         )
         self.scene.jaw_camera = None
+        self.scene.scene_camera = None
         self.object_height = 0.55
-        # self.object_name = "spear_combine"
-        # self.scale = (1.0, 1.0, 0.75)
-        self.object_name = "cylinder"
-        self.scale = (0.03, 0.03, 0.05)
+        self.object_name = "spear_combine"
+        self.scale = (0.75, 0.75, 0.75)
+        # self.object_name = "cylinder"
+        # self.scale = (0.03, 0.03, 0.05)
         self.scene.target_object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
@@ -84,7 +85,7 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
         marker_cfg.prim_path = "/Visuals/FrameTransformer"
         self.scene.ee_frame = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Robot/base",
-            debug_vis=True,
+            debug_vis=False,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
@@ -125,9 +126,9 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
         self.observations.distillation = None
 
         # * curriculum
-        self.curriculum.action_rate.params["num_steps"] = 24 * 0#3000
-        self.curriculum.joint_vel.params["num_steps"] = 24 * 0#3000
-        self.curriculum.grab_object.params["num_steps"] = 24 * 0#2000
+        self.curriculum.action_rate.params["num_steps"] = 24 * 20000
+        self.curriculum.joint_vel.params["num_steps"] = 24 * 20000
+        self.curriculum.grab_object.params["num_steps"] = 24 * 10000
 
         # * events
         self.events.reset_object_position.params["asset_cfg"].body_names = self.object_name
@@ -139,7 +140,7 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
             asset_name="target_object",
             body_name=self.object_name,
             resampling_time_range=(5.0, 5.0),
-            debug_vis=True,
+            debug_vis=False,
             ranges=mdp.UniformPoseCommandCfg.Ranges(
                 pos_x=(0.0, 0.0),
                 pos_y=(0.0, 0.0),

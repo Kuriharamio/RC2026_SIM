@@ -53,17 +53,20 @@ class ArmControalLiftDistillationVisionEnvCfg(ArmControlEnvCfg):
                 joint_vel={".*": 0.0},
             ),
         )
-        self.object_height = 0.5
-        self.object_name = "cylinder"
+        self.object_height = 0.55
+        self.object_name = "spear_combine"
+        self.scale = (0.75, 0.75, 0.35)
+        # self.object_name = "cylinder"
+        # self.scale = (0.03, 0.03, 0.05)
         self.scene.target_object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
                 pos=[0.0, 0.0, self.object_height],
-                rot=[1, 0, 0, 0],
+                rot=[0.707, 0, 0, 0.707],
             ),
             spawn=UsdFileCfg(
                 usd_path=f"assets/Object/{self.object_name}.usd",
-                scale=(0.03, 0.03, 0.05),
+                scale=self.scale,
                 rigid_props=RigidBodyPropertiesCfg(
                     solver_position_iteration_count=16,
                     solver_velocity_iteration_count=1,
@@ -100,24 +103,27 @@ class ArmControalLiftDistillationVisionEnvCfg(ArmControlEnvCfg):
             "{ENV_REGEX_NS}/Table/weapon_table",
             "{ENV_REGEX_NS}/Object/" + self.object_name,
         ]
-        self.scene.other_contact_forces.debug_vis = False
-        self.scene.jaw_contact_forces.debug_vis = False
-        self.scene.gripper_contact_forces.debug_vis = False
+
         # * rewards
-        self.rewards.lifting_object.params["minimal_height"] = self.object_height + 0.025
-        self.rewards.object_goal_tracking.params["minimal_height"] = self.object_height + 0.025
-        self.rewards.object_goal_tracking_fine_grained.params["minimal_height"] = self.object_height + 0.025
-        self.rewards.squeeze_object_jaw.params["minimal_height"] = self.object_height + 0.025
-        self.rewards.squeeze_object_gripper.params["minimal_height"] = self.object_height + 0.025
+        error_height = 0.04
+        self.rewards.lifting_object.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_dist.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_dist_fine_grained.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_angle.params["minimal_height"] = self.object_height + error_height
+        self.rewards.object_goal_tracking_angle_fine_grained.params["minimal_height"] = self.object_height + error_height
+        self.rewards.squeeze_object_jaw.params["minimal_height"] = self.object_height + error_height
+        self.rewards.squeeze_object_gripper.params["minimal_height"] = self.object_height + error_height
         self.rewards.grab_object.weight = 100.0
         self.rewards.lifting_object.weight = 25.0
-        self.rewards.object_goal_tracking.weight = 20.0
+        self.rewards.object_goal_tracking_dist.weight = 20.0
+        self.rewards.object_goal_tracking_angle.weight = 20.0
         self.rewards.squeeze_object_jaw.weight = -1e-5
         self.rewards.squeeze_object_gripper.weight = -1e-5
 
         # * curriculum
-        self.curriculum.action_rate.params["num_steps"] = 2400
-        self.curriculum.joint_vel.params["num_steps"] = 2400
+        self.curriculum.action_rate.params["num_steps"] = 24 * 3000
+        self.curriculum.joint_vel.params["num_steps"] = 24 * 3000
+        self.curriculum.grab_object.params["num_steps"] = 24 * 0#2000
 
         # * events
         self.events.reset_object_position.params["asset_cfg"].body_names = self.object_name
@@ -125,12 +131,11 @@ class ArmControalLiftDistillationVisionEnvCfg(ArmControlEnvCfg):
         # * commands
         # Set the body name for the end effector
         self.commands.object_pose.body_name = ["gripper"]
-        self.commands.object_pose.debug_vis = False
         # self.commands.object_pose_debug = mdp.UniformPoseCommandCfg(
-        #     asset_name="robot",
-        #     body_name="wrist",
+        #     asset_name="target_object",
+        #     body_name=self.object_name,
         #     resampling_time_range=(5.0, 5.0),
-        #     debug_vis=True,
+        #     debug_vis=False,
         #     ranges=mdp.UniformPoseCommandCfg.Ranges(
         #         pos_x=(0.0, 0.0),
         #         pos_y=(0.0, 0.0),
