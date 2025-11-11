@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from matplotlib import table
+from onnx_ir import val
 from ray import get
 
 import torch
@@ -34,7 +35,6 @@ def object_is_lifted(
     # print("object_is_lifted: ",torch.where(object.data.root_pos_w[:, 2] > minimal_height, 1.0, 0.0))
     return torch.where(object.data.root_pos_w[:, 2] > minimal_height, 1.0, 0.0)
 
-
 def object_ee_distance(
     env: ManagerBasedRLEnv,
     std: float,
@@ -47,20 +47,39 @@ def object_ee_distance(
     ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
     # Target object position: (num_envs, 3)
     target_pos_w = object.data.root_pos_w
-    target_quat_w = object.data.root_state_w[:, 3:7]
-    # calculate the vertical direction of the object in world frame
-    R = matrix_from_quat(target_quat_w)
-    target_vertical_dir_w = torch.matmul(R, torch.tensor([0.0, 0.0, 1.0], device=R.device))
     # End-effector position: (num_envs, 3)
     ee_w = ee_frame.data.target_pos_w[..., 0, :]
-    # Error-Vector: (num_envs, 3)
-    error_vec = target_pos_w - ee_w
-    # dot-product of the error-vector and the vertiacal direction of the object
-    vertical_distance = torch.abs(torch.sum(error_vec * target_vertical_dir_w, dim=1))
-    # Distance of the end-effector to the object: (num_envs,)
-    # object_ee_distance = torch.norm(target_pos_w - ee_w, dim=1)
-    return 1 - torch.tanh(vertical_distance / std)
+    # Position distance between end-effector and object
+    position_distance = torch.norm(target_pos_w - ee_w, dim=1)
 
+    return 1 - torch.tanh(position_distance / std)
+
+def object_ee_angle(
+    env: ManagerBasedRLEnv,
+    std: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+) -> torch.Tensor:
+    """Reward the agent for reaching the object using tanh-kernel."""
+    # extract the used quantities (to enable type-hinting)
+    object: RigidObject = env.scene[object_cfg.name]
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    # Target object position: (num_envs, 3)
+    target_quat_w = object.data.root_state_w[:, 3:7]
+    # End-effector position: (num_envs, 3)
+    ee_quat_w = ee_frame.data.target_quat_w[..., 0, :]
+
+    # Calculate the z-axis direction of both object and end-effector in world frame
+    object_R = matrix_from_quat(target_quat_w)
+    object_z_dir_w = object_R[:, :, 2]  # Z-axis is column 2
+
+    ee_R = matrix_from_quat(ee_quat_w)
+    ee_z_dir_w = ee_R[:, :, 2]  # Z-axis is column 2
+
+    # Compute alignment of z-axes (dot product, 1 if parallel, 0 if perpendicular)
+    z_alignment = torch.abs(torch.sum(object_z_dir_w * ee_z_dir_w, dim=1))
+
+    return torch.tanh(z_alignment / std)
 
 def object_goal_distance(
     env: ManagerBasedRLEnv,
@@ -80,8 +99,10 @@ def object_goal_distance(
     des_pos_w, _ = combine_frame_transforms(robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], des_pos_b)
     # distance of the end-effector to the object: (num_envs,)
     distance = torch.norm(des_pos_w - object.data.root_pos_w[:, :3], dim=1)
+    
+    extra_factor = torch.where(distance < 0.05, 1.5, 1.0)
     # rewarded if the object is lifted above the threshold
-    return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(distance / std))
+    return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(distance / std)) * extra_factor
 
 def object_goal_angle(
     env: ManagerBasedRLEnv,
@@ -110,8 +131,11 @@ def object_goal_angle(
 
     angle_diff = torch.norm(des_euler - object_euler, dim=1)
 
+    extra_factor = 1.0
+    extra_factor = torch.where(angle_diff < 0.05, 1.5, 1.0)
+
     # rewarded if the object is lifted above the threshold
-    return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(angle_diff / std))
+    return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(angle_diff / std)) * extra_factor
 
 def object_ee_distance_and_lifted(
     env: ManagerBasedRLEnv,
@@ -172,11 +196,13 @@ def grab_object(
     env,
     sensor_cfg_jaw: SceneEntityCfg,
     sensor_cfg_gripper: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
     threshold: float = 1.0,
 ) -> torch.Tensor:
     # 获取接触传感器
     jaw_contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg_jaw.name]
     gripper_contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg_gripper.name]
+    object: RigidObject = env.scene[object_cfg.name]
 
     # 获取两个夹爪的接触力
     jaw_force = jaw_contact_sensor.data.net_forces_w[:, sensor_cfg_jaw.body_ids, :]  # 左夹爪受力
@@ -200,12 +226,21 @@ def grab_object(
     # 奖励力方向相反的情况，使用 (1 + dot_product) 使得方向完全相反时奖励最大
     opposite_force_reward = (1 - force_dot_product) > threshold
 
-    # 只有当两个夹爪都接触物体时才给予奖励
-    rew = torch.sum(both_contact.float() * opposite_force_reward.float(), dim=1)
-    # print(rew.shape)
+    # 计算夹爪与物体位置的距离，用于调整奖励系数
+    object_pos = object.data.root_pos_w[:, :3]
 
-    # if rew > 0:
-    #     print("grab_object")
+    valid_indices = both_contact.nonzero(as_tuple=True)[0]
+    extra_factor = torch.zeros_like(both_contact.float())
+
+    jaw_distance = torch.norm((jaw_contact_pos[valid_indices, 0, :]) - object_pos[valid_indices, :], dim=-1)
+    gripper_distance = torch.norm((gripper_contact_pos[valid_indices, 0,  :]) - object_pos[valid_indices, :], dim=-1)
+    avg_distance = (jaw_distance + gripper_distance) / 2
+    # 使用指数衰减函数，使得距离越近奖励系数越高
+    extra_factor[valid_indices] = (0.5 + torch.exp(-avg_distance / 0.05)).unsqueeze(1)
+
+    # 只有当两个夹爪都接触物体时才给予奖励，并乘以距离奖励系数
+    rew = torch.sum(both_contact.float() * opposite_force_reward.float() * extra_factor, dim=1) 
+
     return rew
 
 

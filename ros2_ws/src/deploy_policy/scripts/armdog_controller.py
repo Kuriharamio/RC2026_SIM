@@ -55,23 +55,39 @@ class ArmDogController(Node):
 
         if self.dog_type == 'none':
             self.default_pos = np.array([
-                0.1, -0.1, 0.1, -0.1, 
-                0.8, 0.8, 1.0, 1.0,
-                -1.5, -1.5, -1.5, -1.5,
+                # 0.1, -0.1, 0.1, -0.1, 
+                # 0.8, 0.8, 1.0, 1.0,
+                # -1.5, -1.5, -1.5, -1.5,
+                0.00, 0.80, -1.50,
+                0.00, 0.80, -1.50,
+                0.00, 0.80, -1.50,
+                0.00, 0.80, -1.50
             ])
             self.joint_names = [
-                "FL_hip_joint",
+                # "FL_hip_joint",
+                # "FR_hip_joint",
+                # "RL_hip_joint",
+                # "RR_hip_joint",
+                # "FL_thigh_joint",
+                # "FR_thigh_joint",
+                # "RL_thigh_joint",
+                # "RR_thigh_joint",
+                # "FL_calf_joint",
+                # "FR_calf_joint",
+                # "RL_calf_joint",
+                # "RR_calf_joint",
                 "FR_hip_joint",
-                "RL_hip_joint",
-                "RR_hip_joint",
-                "FL_thigh_joint",
                 "FR_thigh_joint",
-                "RL_thigh_joint",
-                "RR_thigh_joint",
-                "FL_calf_joint",
                 "FR_calf_joint",
-                "RL_calf_joint",
+                "FL_hip_joint",
+                "FL_thigh_joint",
+                "FL_calf_joint",
+                "RR_hip_joint",
+                "RR_thigh_joint",
                 "RR_calf_joint",
+                "RL_hip_joint",
+                "RL_thigh_joint",
+                "RL_calf_joint",
             ]
         elif self.dog_type == 'single':
             self.default_pos = np.array([
@@ -144,7 +160,12 @@ class ArmDogController(Node):
             ]
 
         self.action_length = len(self.default_pos)
-        self._action_scale = 0.25
+        self._action_scale = [
+            0.125, 0.25, 0.25,
+            0.125, 0.25, 0.25,
+            0.125, 0.25, 0.25,
+            0.125, 0.25, 0.25
+        ]
         self._previous_action = np.zeros(self.action_length)
 
         self._logger.info("ArmDogController initialized")
@@ -181,7 +202,7 @@ class ArmDogController(Node):
         self._joint_command.name = self.joint_names
 
         # Compute final joint positions by adding scaled actions to default positions
-        action_pos = self.default_pos + np.clip(self.action, -10.0, 10.0) * self._action_scale
+        action_pos = self.default_pos + np.clip(self.action, -100.0, 100.0) * self._action_scale
         # action_pos[8:10], action_pos[14:24] = np.zeros(2), np.zeros(10)
         self._joint_command.position = action_pos.tolist()
         self._joint_command.velocity = np.zeros(len(self.joint_names)).tolist()
@@ -224,16 +245,16 @@ class ArmDogController(Node):
         )
 
         # Initialize observation vector
-        obs = np.zeros(3 + 3 + 3 + 3 + self.action_length*3)
+        obs = np.zeros(3 + 3 + 3 + self.action_length*3)
 
         idx = 0
         # Fill observation vector components:
         # Base linear velocity (3)
-        obs[idx : idx + 3] = self.base_lin_vel
-        idx += 3
+        # obs[idx : idx + 3] = self.base_lin_vel
+        # idx += 3
 
         # Base angular velocity (3)
-        obs[idx : idx + 3] = base_ang_vel
+        obs[idx : idx + 3] = base_ang_vel * 0.25
         idx += 3
 
         # # Base linear acceleration (3)
@@ -269,14 +290,14 @@ class ArmDogController(Node):
         idx += self.action_length
 
         # Store joint velocities
-        obs[idx : idx + self.action_length] = joint_vel
+        obs[idx : idx + self.action_length] = joint_vel * 0.05
         idx += self.action_length
 
         # Store previous actions
-        obs[idx : idx + self.action_length] = np.clip(self._previous_action, -50.0, 50.0)
+        obs[idx : idx + self.action_length] = self._previous_action
         idx += self.action_length
 
-        return obs
+        return np.clip(obs, -100.0, 100.0)
 
     def _compute_action(self, obs):
         # Run inference with the PyTorch policy

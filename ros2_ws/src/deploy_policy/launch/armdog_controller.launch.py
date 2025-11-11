@@ -9,7 +9,7 @@ import os
 def generate_launch_description():
     policy_path = os.path.join(
         get_package_share_directory('deploy_policy'),
-        'policy/policy_rough/exported/policy.pt'
+        'policy/himloco/exported/policy.pt'
     )
     return LaunchDescription([
         DeclareLaunchArgument(

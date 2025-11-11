@@ -22,7 +22,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from numpy import squeeze
-from sympy import false
+from sympy import false, im
 
 from . import mdp
 
@@ -154,7 +154,7 @@ class ActionsCfg:
         asset_name="robot",
         joint_names=["^(?!.*gripper).*$"],
         # joint_names=[".*"],
-        scale=0.5,
+        scale=0.25,
         use_default_offset=True,
         preserve_order=True,
     )
@@ -174,50 +174,75 @@ class ObservationsCfg:
     @configclass
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
-
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
-        object_angles = ObsTerm(func=mdp.object_euler_angles_in_world_frame, noise=Unoise(n_min=-0.02, n_max=0.02))
-        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.00, n_max=0.00))
-        actions = ObsTerm(func=mdp.last_action_check)
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+        )
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel_rel,
+            noise=Unoise(n_min=-1.5, n_max=1.5),
+        )
+        joint_effort = ObsTerm(
+            func=mdp.joint_effort,
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=".*(gripper)")
+            },
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+        )
+        target_object_position = ObsTerm(
+            func=mdp.command_pose_angle,
+            params={"command_name": "object_pose"},
+            noise=Unoise(n_min=-0.00, n_max=0.00),
+        )
+        actions = ObsTerm(
+            func=mdp.last_action_check, 
+        )
 
         def __post_init__(self) -> None:
             self.enable_corruption = True
             self.concatenate_terms = True
 
     @configclass
-    class VisionDistillationCfg(ObsGroup):
-        """Observations for vison distillation group."""
+    class PrivilegeCfg(ObsGroup):
+        ''' Privileged Observation '''
+        object_position = ObsTerm(
+            func=mdp.object_position_in_robot_root_frame,
+            noise=Unoise(n_min=-0.02, n_max=0.02),
+        )
+        object_angles = ObsTerm(
+            func=mdp.object_euler_angles_in_world_frame,
+            noise=Unoise(n_min=-0.02, n_max=0.02),
+        )
 
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        jaw_img_features = ObsTerm(
-            func=mdp.image_features,
+    @configclass
+    class JawImgCfg(ObsGroup):
+        ''' Jaw Camera Observation '''
+        jaw_img = ObsTerm(
+            func=mdp.image,
             params={
                 "sensor_cfg": SceneEntityCfg("jaw_camera"),
-                "model_name": "resnet18",
                 "data_type": "rgb",
             },
+            noise=Unoise(n_min=-0.01, n_max=0.01),
         )
-        scene_img_features = ObsTerm(
-            func=mdp.image_features,
+
+    @configclass
+    class SceneImgCfg(ObsGroup):
+        ''' Jaw Camera Observation '''
+        scene_img = ObsTerm(
+            func=mdp.image,
             params={
                 "sensor_cfg": SceneEntityCfg("scene_camera"),
-                "model_name": "resnet18",
                 "data_type": "rgb",
             },
+            noise=Unoise(n_min=-0.01, n_max=0.01),
         )
-        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"}, noise=Unoise(n_min=-0.0, n_max=0.0))
-        actions = ObsTerm(func=mdp.last_action_check)
-
-        def __post_init__(self) -> None:
-            self.enable_corruption = True
-            self.concatenate_terms = True
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
-    distillation: VisionDistillationCfg = VisionDistillationCfg()
+    privilege: PrivilegeCfg = PrivilegeCfg()
+    jaw_camera: JawImgCfg = JawImgCfg()
+    scene_camera: SceneImgCfg = SceneImgCfg()
 
 
 @configclass
@@ -265,7 +290,9 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 0.05}, weight=1.0)
+    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 0.05}, weight=2.0)
+
+    align_object = RewTerm(func=mdp.object_ee_angle, params={"std": 0.3}, weight=1.0)
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 1.07}, weight=15.0)
 
@@ -289,7 +316,7 @@ class RewardsCfg:
 
     object_goal_tracking_angle_fine_grained = RewTerm(
         func=mdp.object_goal_angle,
-        params={"std": 0.5, "minimal_height": 1.07, "command_name": "object_pose"},
+        params={"std": 0.1, "minimal_height": 1.07, "command_name": "object_pose"},
         weight=5.0,
     )
 
@@ -379,17 +406,17 @@ class CurriculumCfg:
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
-        params={"term_name": "action_rate", "weight": -1e-1, "num_steps": 30000},
+        params={"term_name": "action_rate", "weight": -1e-2, "num_steps": 30000},
     )
 
     joint_vel = CurrTerm(
         func=mdp.modify_reward_weight,
-        params={"term_name": "joint_vel", "weight": -1e-1, "num_steps": 30000},
+        params={"term_name": "joint_vel", "weight": -1e-2, "num_steps": 30000},
     )
 
     grab_object = CurrTerm(
         func=mdp.modify_reward_weight,
-        params={"term_name": "grab_object", "weight": 10.0, "num_steps": 10000},
+        params={"term_name": "grab_object", "weight": 5.0, "num_steps": 10000},
     )
 
 
@@ -466,6 +493,6 @@ class ArmControlEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.bounce_threshold_velocity = 0.2
         self.sim.physx.bounce_threshold_velocity = 0.01
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 128 * 1024
+        self.sim.physx.gpu_total_aggregate_pairs_capacity = 8 * 1024 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
         self.sim.physx.gpu_collision_stack_size = 256 * 1024 * 1024

@@ -4,12 +4,19 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
+from re import L
 
+from Robocon2026.utils.utils import print_yellow
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
 from local_rsl_rl.networks import MLP, EmpiricalNormalization
+from local_rsl_rl.networks.encodering import EncodingWrapper
+
+from typing import List
+
+from transformers import AutoModel
 
 
 class ActorCritic(nn.Module):
@@ -36,16 +43,54 @@ class ActorCritic(nn.Module):
             )
         super().__init__()
 
+        self.enable_resnet_encoder = kwargs.get("enable_resnet_encoder", False)
+        self.img_obs_keys = kwargs.get("img_obs_keys", [])
+        self.state_obs_keys = kwargs.get("state_obs_keys", [])
+        self.img_bottleneck_dim = kwargs.get("img_bottleneck_dim", 256)
+        self.state_latent_dim = kwargs.get("state_latent_dim", 64)
+
+        print_yellow(f"{self.enable_resnet_encoder}")
+
         # get the observation dimensions
         self.obs_groups = obs_groups
+        state_input_dim = 0
+
         num_actor_obs = 0
+
+        actor_img_dim = 0
+        actor_state_dim = 0
+        actor_other_dim = 0
         for obs_group in obs_groups["policy"]:
-            assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
-            num_actor_obs += obs[obs_group].shape[-1]
+            # assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
+            # num_actor_obs += obs[obs_group].shape[-1]
+            if obs_group in self.img_obs_keys:
+                num_actor_obs += self.img_bottleneck_dim
+                actor_img_dim += self.img_bottleneck_dim
+            elif obs_group in self.state_obs_keys:
+                num_actor_obs += self.state_latent_dim
+                actor_state_dim += self.state_latent_dim
+                state_input_dim += obs[obs_group].shape[-1]
+            else:
+                num_actor_obs += obs[obs_group].shape[-1]
+                actor_other_dim += obs[obs_group].shape[-1]
+
         num_critic_obs = 0
+
+        critic_img_dim = 0
+        critic_state_dim = 0
+        critic_other_dim = 0
         for obs_group in obs_groups["critic"]:
-            assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
-            num_critic_obs += obs[obs_group].shape[-1]
+            # assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
+            # num_critic_obs += obs[obs_group].shape[-1]
+            if obs_group in self.img_obs_keys:
+                num_critic_obs += self.img_bottleneck_dim
+                critic_img_dim += self.img_bottleneck_dim
+            elif obs_group in self.state_obs_keys:
+                num_critic_obs += self.state_latent_dim
+                critic_state_dim += self.state_latent_dim
+            else:
+                num_critic_obs += obs[obs_group].shape[-1]
+                critic_other_dim += obs[obs_group].shape[-1]
 
         # actor
         self.actor = MLP(num_actor_obs, num_actions, actor_hidden_dims, activation)
@@ -55,7 +100,10 @@ class ActorCritic(nn.Module):
             self.actor_obs_normalizer = EmpiricalNormalization(num_actor_obs)
         else:
             self.actor_obs_normalizer = torch.nn.Identity()
-        print(f"Actor MLP: {self.actor}")
+        print(f"Actor MLP: {self.actor}\n")
+        print(f"Actor Img Dims: {actor_img_dim}\n"
+              f"Actor State Dims: {actor_state_dim}\n"
+              f"Actor Other Dims: {actor_other_dim}\n")
 
         # critic
         self.critic = MLP(num_critic_obs, 1, critic_hidden_dims, activation)
@@ -65,7 +113,36 @@ class ActorCritic(nn.Module):
             self.critic_obs_normalizer = EmpiricalNormalization(num_critic_obs)
         else:
             self.critic_obs_normalizer = torch.nn.Identity()
-        print(f"Critic MLP: {self.critic}")
+        print(f"Critic MLP: {self.critic}\n")
+        print(f"Critic Img Dims: {critic_img_dim}\n"
+              f"Critic State Dims: {critic_state_dim}\n"
+              f"Critic Other Dims: {critic_other_dim}\n")
+
+        if self.enable_resnet_encoder:
+            # resnet_config = ResNetEncoder(
+            #     stage_sizes=(1, 1, 1, 1),
+            #     block_cls=ResNetBlock,
+            #     pre_pooling=True
+            # )
+
+            resnet10 = AutoModel.from_pretrained(
+                "helper2424/resnet10", trust_remote_code=True
+            )
+
+            # * 不同相机的数据用不同的编码器
+            encoders = {}
+            for image_obs_key in self.img_obs_keys:
+                encoders[image_obs_key] = resnet10
+
+            # * 共享编码器
+            self.shared_encoder = EncodingWrapper(
+                encoder=encoders,
+                state_latent_dim=self.state_latent_dim,
+                img_obs_keys=self.img_obs_keys,
+                state_obs_keys=self.state_obs_keys,
+                state_input_dim=state_input_dim,
+            )
+            print(f"Shared Encoder: {self.shared_encoder}")
 
         # Action noise
         self.noise_std_type = noise_std_type
@@ -119,36 +196,69 @@ class ActorCritic(nn.Module):
         return self.distribution.sample()
 
     def act_inference(self, obs):
-        obs = self.get_actor_obs(obs)
+        obs = self.get_actor_obs(obs, train=False)
         obs = self.actor_obs_normalizer(obs)
         return self.actor(obs)
 
     def evaluate(self, obs, **kwargs):
-        obs = self.get_critic_obs(obs)
+        obs = self.get_critic_obs(obs, train=self.training)
         obs = self.critic_obs_normalizer(obs)
         return self.critic(obs)
 
-    def get_actor_obs(self, obs):
-        obs_list = []
+    def get_actor_obs(self, obs, train: bool = True):
+        # obs_list = []
+        # for obs_group in self.obs_groups["policy"]:
+        #     obs_list.append(obs[obs_group])
+        # return torch.cat(obs_list, dim=-1)
+        obs_dict = {}
+        other_obs_list = []
         for obs_group in self.obs_groups["policy"]:
-            obs_list.append(obs[obs_group])
-        return torch.cat(obs_list, dim=-1)
+            if obs_group in self.img_obs_keys or obs_group in self.state_obs_keys:
+                obs_dict[obs_group] = obs[obs_group]
+            else:
+                other_obs_list.append(obs[obs_group])
 
-    def get_critic_obs(self, obs):
-        obs_list = []
+        if self.enable_resnet_encoder:
+            encoded_obs = self.shared_encoder(obs_dict, train=train)
+
+        if self.enable_resnet_encoder and len(other_obs_list) > 0:
+            return torch.cat([encoded_obs, other_obs_list], dim=-1)
+        elif self.enable_resnet_encoder and len(other_obs_list) == 0:
+            return encoded_obs
+        elif not self.enable_resnet_encoder and len(other_obs_list) > 0:
+            return torch.cat(other_obs_list, dim=-1)
+
+    def get_critic_obs(self, obs, train: bool = True):
+        # obs_list = []
+        # for obs_group in self.obs_groups["critic"]:
+        #     obs_list.append(obs[obs_group])
+        # return torch.cat(obs_list, dim=-1)
+        obs_dict = {}
+        other_obs_list = []
         for obs_group in self.obs_groups["critic"]:
-            obs_list.append(obs[obs_group])
-        return torch.cat(obs_list, dim=-1)
+            if obs_group in self.img_obs_keys or obs_group in self.state_obs_keys:
+                obs_dict[obs_group] = obs[obs_group]
+            else:
+                other_obs_list.append(obs[obs_group])
+        if self.enable_resnet_encoder:
+            encoded_obs = self.shared_encoder(obs_dict, train=train)
+
+        if self.enable_resnet_encoder and len(other_obs_list) > 0:
+            return torch.cat([encoded_obs, other_obs_list], dim=-1)
+        elif self.enable_resnet_encoder and len(other_obs_list) == 0:
+            return encoded_obs
+        elif not self.enable_resnet_encoder and len(other_obs_list) > 0:
+            return torch.cat(other_obs_list, dim=-1)
 
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def update_normalization(self, obs):
         if self.actor_obs_normalization:
-            actor_obs = self.get_actor_obs(obs)
+            actor_obs = self.get_actor_obs(obs, train=False)
             self.actor_obs_normalizer.update(actor_obs)
         if self.critic_obs_normalization:
-            critic_obs = self.get_critic_obs(obs)
+            critic_obs = self.get_critic_obs(obs, train=False)
             self.critic_obs_normalizer.update(critic_obs)
 
     def load_state_dict(self, state_dict, strict=True):
