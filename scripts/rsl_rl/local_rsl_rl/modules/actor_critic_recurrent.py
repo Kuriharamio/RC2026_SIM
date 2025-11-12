@@ -185,6 +185,35 @@ class ActorCriticRecurrent(nn.Module):
             bool: Whether this training resumes a previous training. This flag is used by the `load()` function of
                   `OnPolicyRunner` to determine how to load further parameters (relevant for, e.g., distillation).
         """
-
-        super().load_state_dict(state_dict, strict=strict)
+        # Check if this is a student model state dict (for distillation)
+        if any("student" in key for key in state_dict.keys()):
+            # Create new state dict with separate actor and critic parameters
+            new_state_dict = {}
+            for key, value in state_dict.items():
+                if "student.actor" in key:
+                    new_key = key.replace("student.actor", "actor")
+                    new_state_dict[new_key] = value
+                elif "student.critic" in key:
+                    new_key = key.replace("student.critic", "critic")
+                    new_state_dict[new_key] = value
+                elif "student.memory_a" in key:
+                    new_key = key.replace("student.memory_a", "memory_a")
+                    new_state_dict[new_key] = value
+                elif "student.memory_c" in key:
+                    new_key = key.replace("student.memory_c", "memory_c")
+                    new_state_dict[new_key] = value
+                elif "student.actor_obs_normalizer" in key:
+                    new_key = key.replace("student.actor_obs_normalizer", "actor_obs_normalizer")
+                    new_state_dict[new_key] = value
+                elif "student.critic_obs_normalizer" in key:
+                    new_key = key.replace("student.critic_obs_normalizer", "critic_obs_normalizer")
+                    new_state_dict[new_key] = value
+                # Handle other potential student parameters here if needed
+                elif "student" not in key:
+                    new_state_dict[key] = value
+            
+            super().load_state_dict(new_state_dict, strict=strict)
+        else:
+            # Standard loading procedure
+            super().load_state_dict(state_dict, strict=strict)
         return True
