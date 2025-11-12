@@ -17,7 +17,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.lift_ppo_env_cfg:ArmControalLiftEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.config.lift_ppo_env_cfg:ArmControlLiftEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ArmLiftPPORunnerCfg",
     },
 )
@@ -27,7 +27,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.lift_ppo_env_cfg:ArmControalLiftEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.config.lift_ppo_env_cfg:ArmControlLiftEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ArmLiftPPORunnerCfg",
     },
 )
@@ -37,7 +37,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControalLiftDistillationVisionEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControlLiftDistillationVisionEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ArmLiftDistillationRunnerCfg",
     },
 )
@@ -47,7 +47,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControalLiftDistillationVisionEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControlLiftDistillationVisionEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ArmLiftDistillationRunnerCfg",
     },
 )
@@ -57,7 +57,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControalLiftDistillationVisionEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControlLiftDistillationVisionEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ArmLiftFinetunePPORunnerCfg",
     },
 )
@@ -67,7 +67,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControalLiftDistillationVisionEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.config.lift_distillation_vision_env_cfg:ArmControlLiftDistillationVisionEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ArmLiftFinetunePPORunnerCfg",
     },
 )

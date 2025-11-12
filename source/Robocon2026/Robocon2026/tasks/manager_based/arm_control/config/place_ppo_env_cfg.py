@@ -27,7 +27,7 @@ from Robocon2026.tasks.manager_based.arm_control import mdp
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 @configclass
-class ArmControalLiftEnvCfg(ArmControlEnvCfg):
+class ArmControlLiftEnvCfg(ArmControlEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -164,7 +164,7 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
 
 
 @configclass
-class ArmControalLiftEnvCfg_PLAY(ArmControalLiftEnvCfg):
+class ArmControlLiftEnvCfg_PLAY(ArmControlLiftEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
