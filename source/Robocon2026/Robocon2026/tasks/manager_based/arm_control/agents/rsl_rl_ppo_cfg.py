@@ -138,13 +138,15 @@ class ArmLiftDistillationRunnerCfg(ArmReachPPORunnerCfg):
     run_name = "distillation"
 
     obs_groups = {
-        "policy": ["policy", "jaw_camera", "scene_camera"],
-        "teacher": ["policy"],
-        "critic": ["policy", "jaw_camera", "scene_camera"],
+        "policy": ["policy", "privilege", "jaw_camera_feature", "scene_camera_feature"],
+        "teacher": ["policy", "privilege"],
+        "critic": ["policy", "privilege", "jaw_camera_feature", "scene_camera_feature"],
     }
     policy = RslRlDistillationStudentTeacherRecurrentCfg(
-        student_hidden_dims=[256, 128, 64],
+        student_hidden_dims=[512, 256, 128],
         teacher_hidden_dims=[256, 128, 64],
+        teacher_obs_normalization=True,
+        student_obs_normalization=True,
         activation="elu",
         init_noise_std=0.1,
         class_name="StudentTeacherRecurrent",
@@ -155,8 +157,8 @@ class ArmLiftDistillationRunnerCfg(ArmReachPPORunnerCfg):
     )
     algorithm = RslRlDistillationAlgorithmCfg(
         num_learning_epochs=5,
-        learning_rate=3e-4,
-        gradient_length=5,
+        learning_rate=1e-3,
+        gradient_length=5*(2048 / 16),
         optimizer="adam",
         loss_type="mse",
     )

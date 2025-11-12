@@ -210,7 +210,7 @@ class ObservationsCfg:
             noise=Unoise(n_min=-0.02, n_max=0.02),
         )
         object_angles = ObsTerm(
-            func=mdp.object_euler_angles_in_world_frame,
+            func=mdp.object_euler_angles_in_robot_root_frame,
             noise=Unoise(n_min=-0.02, n_max=0.02),
         )
 
@@ -238,11 +238,38 @@ class ObservationsCfg:
             noise=Unoise(n_min=-0.01, n_max=0.01),
         )
 
+    @configclass
+    class JawImgFeatureCfg(ObsGroup):
+        ''' Jaw Camera ResNet10 Features  Observation '''
+        jaw_img_feature = ObsTerm(
+            func=mdp.ResNet10Extractor,
+            params={
+                "sensor_cfg": SceneEntityCfg("jaw_camera"),
+                "data_type": "rgb",
+                "convert_perspective_to_orthogonal": False,
+            },
+            noise=Unoise(n_min=0.0, n_max=0.0),
+        )
+
+    @configclass
+    class SceneImgFeatureCfg(ObsGroup):
+        ''' Scene Camera ResNet10 Features  Observation '''
+        scene_img_feature = ObsTerm(
+            func=mdp.ResNet10Extractor,
+            params={
+                "sensor_cfg": SceneEntityCfg("scene_camera"),
+                "data_type": "rgb",
+                "convert_perspective_to_orthogonal": False,
+            },
+            noise=Unoise(n_min=0.0, n_max=0.0),
+        )
     # observation groups
     policy: PolicyCfg = PolicyCfg()
     privilege: PrivilegeCfg = PrivilegeCfg()
     jaw_camera: JawImgCfg = JawImgCfg()
+    jaw_camera_feature: JawImgFeatureCfg = JawImgFeatureCfg()
     scene_camera: SceneImgCfg = SceneImgCfg()
+    scene_camera_feature: SceneImgFeatureCfg = SceneImgFeatureCfg()
 
 
 @configclass
@@ -281,6 +308,15 @@ class EventCfg:
         params={
             "pose_range": {"x": (-0.15, 0.15), "y": (0.1, 0.2), "z": (0.0, 0.0)},
             "velocity_range": {},
+            "asset_cfg": SceneEntityCfg("target_object", body_names="target_object"),
+        },
+    )
+
+    push_object = EventTerm(
+        func=mdp.push_by_setting_velocity,
+        mode="reset",
+        params={
+            "velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)},
             "asset_cfg": SceneEntityCfg("target_object", body_names="target_object"),
         },
     )

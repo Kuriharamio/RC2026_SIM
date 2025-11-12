@@ -56,15 +56,24 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
         self.scene.jaw_camera = None
         self.scene.scene_camera = None
         self.object_height = 0.55
+
         self.object_name = "spear_combine"
         self.scale = (0.75, 0.75, 0.75)
+        rot = [0.707, 0, 0, 0.707]
+
         # self.object_name = "cylinder"
         # self.scale = (0.03, 0.03, 0.05)
+        # rot = [0.707, 0, 0, 0.707]
+
+        # self.object_name = "pole_combine"
+        # self.scale = (0.75, 0.75, 0.75)
+        # rot = [0.707, 0, 0.707, 0]
+
         self.scene.target_object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
                 pos=[0.0, 0.0, self.object_height],
-                rot=[0.707, 0, 0, 0.707],
+                rot=rot,
             ),
             spawn=UsdFileCfg(
                 usd_path=f"assets/Object/{self.object_name}.usd",
@@ -124,7 +133,9 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
 
         # * observations
         self.observations.jaw_camera = None
+        self.observations.jaw_camera_feature = None
         self.observations.scene_camera = None
+        self.observations.scene_camera_feature = None
 
         # * curriculum
         self.curriculum.action_rate.params["num_steps"] = 24 * 600
@@ -133,6 +144,7 @@ class ArmControalLiftEnvCfg(ArmControlEnvCfg):
 
         # * events
         self.events.reset_object_position.params["asset_cfg"].body_names = self.object_name
+        self.events.push_object.params["asset_cfg"].body_names = self.object_name
 
         # * commands
         # Set the body name for the end effector

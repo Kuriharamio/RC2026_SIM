@@ -56,11 +56,11 @@ class StudentTeacherRecurrent(nn.Module):
         self.obs_groups = obs_groups
         num_student_obs = 0
         for obs_group in obs_groups["policy"]:
-            assert len(obs[obs_group].shape) == 2, "The StudentTeacher module only supports 1D observations."
+            # assert len(obs[obs_group].shape) == 2, "The StudentTeacher module only supports 1D observations."
             num_student_obs += obs[obs_group].shape[-1]
         num_teacher_obs = 0
         for obs_group in obs_groups["teacher"]:
-            assert len(obs[obs_group].shape) == 2, "The StudentTeacher module only supports 1D observations."
+            # assert len(obs[obs_group].shape) == 2, "The StudentTeacher module only supports 1D observations."
             num_teacher_obs += obs[obs_group].shape[-1]
 
         # student
