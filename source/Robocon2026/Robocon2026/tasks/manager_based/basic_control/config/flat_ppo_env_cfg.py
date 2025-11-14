@@ -13,7 +13,7 @@ from isaaclab.utils import configclass
 ##
 from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
 from Robocon2026.tasks.manager_based.basic_control.basic_control_env_cfg import BasicControlEnvCfg
-
+from Robocon2026.tasks.manager_based.basic_control.mdp import mdp
 
 @configclass
 class ArmDogFlatEnvCfg(BasicControlEnvCfg):
@@ -34,9 +34,19 @@ class ArmDogFlatEnvCfg(BasicControlEnvCfg):
         # no terrain curriculum
         self.curriculum.terrain_levels = None
 
+        # commands
+        self.commands.base_velocity.ranges = (
+            mdp.UniformVelocityCommandCfg.Ranges(
+                lin_vel_x=(-1.0, 1.0),
+                lin_vel_y=(0.0, 0.0),
+                ang_vel_z=(-1.0, 1.0),
+                heading=(-math.pi, math.pi),
+            )
+        )
+
         # rewards
         # 奖励机器人跟踪xy平面线速度命令的表现
-        self.rewards.track_lin_vel_xy_exp.weight = 1.0
+        self.rewards.track_lin_vel_xy_exp.weight = 2.0
         # 奖励机器人跟踪绕z轴角速度命令的表现
         self.rewards.track_ang_vel_z_exp.weight = 0.5
         # 惩罚机器人在z轴方向的线速度（避免不必要的上下运动）
@@ -54,17 +64,19 @@ class ArmDogFlatEnvCfg(BasicControlEnvCfg):
         # 惩罚关节力矩，鼓励节能的动作
         self.rewards.dof_torques_l2.weight = -1.0e-5
         # 奖励足部离地时间，鼓励机器人抬脚行走
-        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.feet_air_time.weight = -0.25 #0.25 #! 抬脚用正的，轮组用负的
         # 惩罚hip关节位置偏差
-        self.rewards.hip_pos_error.weight = -0.05
+        self.rewards.hip_pos_error.weight = -0.2#-0.05
         # # 惩罚关节位置偏差
-        self.rewards.dof_pos_error.weight = -0.0
+        self.rewards.dof_pos_error.weight = -0.1
         # 惩罚足部撞击垂直表面（绊倒）
-        self.rewards.feet_stumble.weight = -0.25
+        self.rewards.feet_stumble.weight = -0.0
         # 惩罚高度过低过高的行为
         self.rewards.base_height_penalty.weight = -0.1
         # 惩罚接近关节位置极限的情况
-        self.rewards.dof_pos_limits.weight = -0.0
+        self.rewards.dof_pos_limits.weight = -0.1
+        # 惩罚足部滑行
+        self.rewards.feet_slide.weight = -0.0
 
 
 class ArmDogFlatEnvCfg_PLAY(ArmDogFlatEnvCfg):

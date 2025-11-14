@@ -26,6 +26,40 @@ class ArmDogRoughFintuneEnvCfg(BasicControlEnvCfg):
         # terminations
         self.terminations.arm_contact = None
 
+        # rewards
+        # 奖励机器人跟踪xy平面线速度命令的表现
+        self.rewards.track_lin_vel_xy_exp.weight = 1.5
+        # 奖励机器人跟踪绕z轴角速度命令的表现
+        self.rewards.track_ang_vel_z_exp.weight = 0.75
+        # 惩罚机器人在z轴方向的线速度（避免不必要的上下运动）
+        self.rewards.lin_vel_z_l2.weight = -2.0
+        # 惩罚机器人绕x、y轴的角速度（避免翻滚和俯仰）
+        self.rewards.ang_vel_xy_l2.weight = -0.05
+        # 惩罚机器人偏离水平姿态
+        self.rewards.flat_orientation_l2.weight = -0.05
+        # 惩罚关节加速度，鼓励平滑的动作
+        self.rewards.dof_acc_l2.weight = -2.5e-7
+        # 惩罚机器人身体部位与环境发生碰撞
+        self.rewards.collision.weight = -0.0
+        # 惩罚动作变化率，鼓励动作的连续性和平滑性
+        self.rewards.action_rate_l2.weight = -0.01
+        # 惩罚关节力矩，鼓励节能的动作
+        self.rewards.dof_torques_l2.weight = -2.0e-4
+        # 奖励足部离地时间，鼓励机器人抬脚行走
+        self.rewards.feet_air_time.weight = 0.01
+        # 惩罚hip关节位置偏差
+        self.rewards.hip_pos_error.weight = -0.05
+        # # 惩罚关节位置偏差
+        self.rewards.dof_pos_error.weight = -0.0
+        # 惩罚足部撞击垂直表面（绊倒）
+        self.rewards.feet_stumble.weight = -0.25
+        # 惩罚高度过低过高的行为
+        self.rewards.base_height_penalty.weight = -0.1
+        # 惩罚接近关节位置极限的情况
+        self.rewards.dof_pos_limits.weight = -0.0
+        # 惩罚足部滑行
+        self.rewards.feet_slide.weight = -0.0
+
 @configclass
 class ArmDogRoughFinetuneEnvCfg_PLAY(ArmDogRoughFintuneEnvCfg):
     def __post_init__(self):

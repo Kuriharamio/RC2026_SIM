@@ -26,10 +26,13 @@ from . import mdp
 ##
 # Pre-defined configs
 ##
+# ? setting dogs
 # from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
 # from Robocon2026.robots.armdog_dual import ARMDOG_DUAL_CFG
-from Robocon2026.robots.go2 import UNITREE_GO2_CFG
+# from Robocon2026.robots.go2 import UNITREE_GO2_CFG
 # from Robocon2026.robots.pikadog import PIKADOG_CFG
+from Robocon2026.robots.go2w import UNITREE_GO2W_CFG
+
 from isaaclab.sensors import ImuCfg, CameraCfg, ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.terrains import TerrainImporterCfg
 from Robocon2026.map.terrains import TERRAINS_CFG
@@ -111,9 +114,30 @@ class ActionsCfg:
     """Action specifications for the MDP."""
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
-        joint_names=[".*"],
-        # clip={".*": (-10.0, 10.0)},
+        joint_names=[
+            ".*L_hip_joint",
+            ".*R_hip_joint",
+            "F[L,R]_thigh_joint",
+            "R[L,R]_thigh_joint",
+            ".*_calf_joint",
+        ],
+        clip={
+            ".*L_hip_joint": (-5.0, 5.0),
+            ".*R_hip_joint": (-5.0, 5.0),
+            "F[L,R]_thigh_joint": (-5.0, 5.0),
+            "R[L,R]_thigh_joint": (-5.0, 5.0),
+            ".*_calf_joint": (-5.0, 5.0),
+        },
         scale=0.25,
+        use_default_offset=True,
+        preserve_order=True,
+    )
+
+    wheel_vel = mdp.JointVelocityActionCfg(
+        asset_name="robot",
+        joint_names=[".*_foot_joint"],
+        clip={".*_foot_joint": (-30.0, 30.0)},
+        scale=1.0,
         use_default_offset=True,
         preserve_order=True,
     )
@@ -154,7 +178,22 @@ class ObservationsCfg:
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        ".*L_hip_joint",
+                        ".*R_hip_joint",
+                        "F[L,R]_thigh_joint",
+                        "R[L,R]_thigh_joint",
+                        ".*_calf_joint",
+                    ],
+                ),
+            },
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+        )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         actions = ObsTerm(func=mdp.last_action_check, clip=(-50.0, 50.0))
 
@@ -170,7 +209,22 @@ class ObservationsCfg:
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        ".*L_hip_joint",
+                        ".*R_hip_joint",
+                        "F[L,R]_thigh_joint",
+                        "R[L,R]_thigh_joint",
+                        ".*_calf_joint",
+                    ],
+                ),
+            },
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+        )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         actions = ObsTerm(func=mdp.last_action_check, clip=(-50.0, 50.0))
         height_scan = ObsTerm(
@@ -348,7 +402,22 @@ class RewardsCfg:
         },
     )
     # # 惩罚关节位置偏差
-    dof_pos_error = RewTerm(func=mdp.joint_deviation_l1, weight=-0.004)
+    dof_pos_error = RewTerm(
+        func=mdp.joint_deviation_l1,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+                    ".*L_hip_joint",
+                    ".*R_hip_joint",
+                    "F[L,R]_thigh_joint",
+                    "R[L,R]_thigh_joint",
+                    ".*_calf_joint",
+                ],
+            ),
+        },
+        weight=-0.004,
+    )
     # 惩罚足部撞击垂直表面（绊倒）
     feet_stumble = RewTerm(
         func=mdp.feet_stumble,
@@ -379,15 +448,15 @@ class RewardsCfg:
     # 惩罚接近关节位置极限的情况
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-1.0)
 
-    # # 惩罚足部滑行
-    # feet_slide = RewTerm(
-    #     func=mdp.feet_slide,
-    #     weight=0.0,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*foot"),
-    #     },
-    # )
-    # # 惩罚足部撞击边缘
+    # 惩罚足部滑行
+    feet_slide = RewTerm(
+        func=mdp.feet_slide,
+        weight=0.0,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*foot"),
+        },
+    )
+    # 惩罚足部撞击边缘
     # feet_edge = RewTerm(
     #     func=mdp.feet_edge,
     #     weight=-0.5,
@@ -509,7 +578,7 @@ class BasicControlEnvCfg(ManagerBasedRLEnvCfg):
                     self.scene.terrain.terrain_generator.curriculum = False
 
         # assets
-        self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/ArmDog")
+        self.scene.robot = UNITREE_GO2W_CFG.replace(prim_path="{ENV_REGEX_NS}/ArmDog")
 
         # action scale
         self.actions.joint_pos.scale = 0.25

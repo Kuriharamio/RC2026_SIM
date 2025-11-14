@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 def weapon_is_assembled(
     env: ManagerBasedRLEnv,
-    threshold: float = 0.02,
+    threshold: float = 0.01,
     frame_cfg_1: SceneEntityCfg = SceneEntityCfg("frame1"),
     frame_cfg_2: SceneEntityCfg = SceneEntityCfg("frame2"),
 ) -> torch.Tensor:
@@ -44,5 +44,4 @@ def weapon_is_assembled(
         dim=1,
     )
 
-    # rewarded if the object is lifted above the threshold
     return distance < threshold

@@ -136,6 +136,7 @@ def grab_object(
 def assemble_distance(
     env: ManagerBasedRLEnv,
     std: float,
+    minimal_height: float,
     frame_cfg_1: SceneEntityCfg = SceneEntityCfg("frame1"),
     frame_cfg_2: SceneEntityCfg = SceneEntityCfg("frame2"),
 ) -> torch.Tensor:
@@ -151,12 +152,13 @@ def assemble_distance(
 
     extra_factor = torch.where(distance < 0.05, 1.5, 1.0)
     # rewarded if the frame is lifted above the threshold
-    return (1 - torch.tanh(distance / std)) * extra_factor
+    return (1 - torch.tanh(distance / std)) * extra_factor * torch.where(frame_1.data.target_pos_w[..., 0, 2] > minimal_height, 1.0, 0.0)
 
 
 def assemble_angle(
     env: ManagerBasedRLEnv,
     std: float,
+    minimal_height: float,
     threshold: float = 0.2,
     frame_cfg_1: SceneEntityCfg = SceneEntityCfg("frame1"),
     frame_cfg_2: SceneEntityCfg = SceneEntityCfg("frame2"),
@@ -190,4 +192,22 @@ def assemble_angle(
     )
     close = distance < threshold
 
-    return torch.tanh(z_alignment / std)  * close
+    return torch.tanh(z_alignment / std)  * close * torch.where(frame_1.data.target_pos_w[..., 0, 2] > minimal_height, 1.0, 0.0)
+
+
+# def weapon_is_assembled(
+#     env: ManagerBasedRLEnv,
+#     threshold: float = 0.02,
+#     frame_cfg_1: SceneEntityCfg = SceneEntityCfg("frame1"),
+#     frame_cfg_2: SceneEntityCfg = SceneEntityCfg("frame2"),
+# ) -> torch.Tensor:
+#     # extract the used quantities (to enable type-hinting)
+#     frame_1: FrameTransformer = env.scene[frame_cfg_1.name]
+#     frame_2: FrameTransformer = env.scene[frame_cfg_2.name]
+
+#     distance = torch.norm(
+#         frame_1.data.target_pos_w[..., 0, :] - frame_2.data.target_pos_w[..., 0, :],
+#         dim=1,
+#     )
+
+#     return distance < threshold

@@ -59,6 +59,8 @@ class ArmDogRoughEnvCfg(BasicControlEnvCfg):
         self.rewards.base_height_penalty.weight = -0.1
         # 惩罚接近关节位置极限的情况
         self.rewards.dof_pos_limits.weight = -0.0
+        # 惩罚足部滑行
+        self.rewards.feet_slide.weight = -0.0
 
 
 @configclass

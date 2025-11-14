@@ -68,7 +68,8 @@ class AssembleWeaponSceneCfg(InteractiveSceneCfg):
     spear_table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/SpearTable",
         init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[0.3, -0.45, 0.126], rot=[1, 0, 0, 0]
+            pos=[0.3, -0.40, 0.126-0.15], rot=[1, 0, 0, 0]
+
         ),
         spawn=UsdFileCfg(usd_path=f"assets/Table/weapon_table.usd", scale=(0.2, 0.7, 0.5)),
     )
@@ -76,7 +77,7 @@ class AssembleWeaponSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/PoleRack",
         # init_state=AssetBaseCfg.InitialStateCfg(pos=[0.0, 0.0, 1.05], rot=[0, 0, 0, 1]),
         init_state=AssetBaseCfg.InitialStateCfg(
-            pos=[-0.187, -0.42, 0.036], rot=[0, 0, 0, 1]
+            pos=[-0.187, -0.38, 0.036], rot=[0, 0, 0, 1]
         ),
         spawn=UsdFileCfg(usd_path=f"assets/Table/pole_rack.usd", scale=(0.7, 1.0, 0.6)),
     )
@@ -272,14 +273,14 @@ class EventCfg:
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+            "asset_cfg": SceneEntityCfg("robot1", body_names=".*"),
             "static_friction_range": (0.5, 4.0),
             "dynamic_friction_range": (0.5, 2.0),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
     )
-    physics_material_1 = EventTerm(
+    physics_material_2 = EventTerm(
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
@@ -291,7 +292,7 @@ class EventCfg:
         },
     )
 
-    add_ee_mass = EventTerm(
+    add_ee_mass_1 = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
@@ -300,7 +301,7 @@ class EventCfg:
             "operation": "add",
         },
     )
-    add_ee_mass = EventTerm(
+    add_ee_mass_2 = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
@@ -318,12 +319,22 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
+    assembled = RewTerm(
+        func=mdp.weapon_is_assembled,
+        params={
+            "threshold": 0.02,
+            "frame_cfg_1": SceneEntityCfg("spear_connect_frame"),
+            "frame_cfg_2": SceneEntityCfg("pole_connect_frame"),
+        },
+        weight=50.0,
+    )
+
     reaching_spear = RewTerm(
         func=mdp.object_ee_distance, 
         params={
             "object_cfg": SceneEntityCfg("spear"),
             "ee_frame_cfg": SceneEntityCfg("ee_frame_1"), 
-            "std": 0.05
+            "std": 0.1
         }, 
         weight=2.0
     )
@@ -360,7 +371,7 @@ class RewardsCfg:
         params={
             "object_cfg": SceneEntityCfg("pole"),
             "ee_frame_cfg": SceneEntityCfg("ee_frame_2"),
-            "std": 0.05,
+            "std": 0.1,
         },
         weight=2.0,
     )
@@ -398,6 +409,7 @@ class RewardsCfg:
         func=mdp.assemble_distance,
         params={
             "std": 0.2,
+            "minimal_height": 1.07,
             "frame_cfg_1": SceneEntityCfg("spear_connect_frame"),
             "frame_cfg_2": SceneEntityCfg("pole_connect_frame"),
         },
@@ -407,6 +419,7 @@ class RewardsCfg:
         func=mdp.assemble_distance,
         params={
             "std": 0.2,
+            "minimal_height": 1.07,
             "frame_cfg_1": SceneEntityCfg("spear_connect_frame"),
             "frame_cfg_2": SceneEntityCfg("pole_connect_frame"),
         },
@@ -417,6 +430,7 @@ class RewardsCfg:
         func=mdp.assemble_angle,
         params={
             "std": 0.3,
+            "minimal_height": 1.07,
             "frame_cfg_1": SceneEntityCfg("spear_connect_frame"),
             "frame_cfg_2": SceneEntityCfg("pole_connect_frame"),
         },
@@ -426,6 +440,7 @@ class RewardsCfg:
         func=mdp.assemble_angle,
         params={
             "std": 0.3,
+            "minimal_height": 1.07,
             "frame_cfg_1": SceneEntityCfg("spear_connect_frame"),
             "frame_cfg_2": SceneEntityCfg("pole_connect_frame"),
         },
@@ -456,7 +471,7 @@ class TerminationsCfg:
     spear_dropping = DoneTerm(
         func=mdp.root_height_below_minimum,
         params={
-            "minimum_height": 0.1, 
+            "minimum_height": 0.03, 
             "asset_cfg": SceneEntityCfg("spear"),
         },
     )
@@ -464,7 +479,7 @@ class TerminationsCfg:
     pole_dropping = DoneTerm(
         func=mdp.root_height_below_minimum,
         params={
-            "minimum_height": 0.1,
+            "minimum_height": 0.03,
             "asset_cfg": SceneEntityCfg("pole"),
         },
     )

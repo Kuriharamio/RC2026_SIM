@@ -28,7 +28,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 
 @configclass
-class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
+class AssembleWeaponDualEnvCfg(AssembleWeaponBaseEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -67,14 +67,14 @@ class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
             ),
         )
 
-        self.spear_height = 0.3
-        self.pole_height = 0.27
+        self.spear_height = 0.3 - 0.15
+        self.pole_height = 0.4
 
         self.scene.spear = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Spear",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.3, -0.46, self.spear_height],
-                rot=[1, 0, 0, 0],
+                pos=[0.3, -0.35, self.spear_height],
+                rot=[0.707, 0, 0, 0.707],
             ),
             spawn=UsdFileCfg(
                 usd_path=f"assets/Object/spear_combine.usd",
@@ -92,7 +92,7 @@ class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
         self.scene.pole = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Pole",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[-0.26582, -0.40, self.pole_height],
+                pos=[-0.26582, -0.405, self.pole_height],
                 rot=[0.9848, 0.17365, 0, 0],
             ),
             spawn=UsdFileCfg(
@@ -160,7 +160,7 @@ class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
                 FrameTransformerCfg.FrameCfg(
                     prim_path="{ENV_REGEX_NS}/Pole/pole_combine",
                     name="spear_connect",
-                    offset=OffsetCfg(pos=[0.0, 0.0, 0.23], rot=[1, 0, 0, 0]),
+                    offset=OffsetCfg(pos=[0.0, 0.0, 0.09], rot=[1, 0, 0, 0]),
                 ),
             ],
         )
@@ -174,6 +174,10 @@ class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
         error_height = 0.025
         self.rewards.lifting_spear.params["minimal_height"] = self.spear_height + error_height
         self.rewards.lifting_pole.params["minimal_height"] = self.pole_height + error_height
+        self.rewards.assemble_dist.params["minimal_height"] = self.spear_height + error_height
+        self.rewards.assemble_dist_fine_grained.params["minimal_height"] = self.spear_height + error_height
+        self.rewards.assemble_angle.params["minimal_height"] = self.spear_height + error_height
+        self.rewards.assemble_angle_fine_grained.params["minimal_height"] = self.spear_height + error_height
         self.rewards.grab_spear.weight = 10.0
         self.rewards.lifting_spear.weight = 10.0
         self.rewards.grab_pole.weight = 10.0
@@ -186,11 +190,11 @@ class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
         # self.observations.scene_camera_feature = None
 
         # * curriculum
-        self.curriculum.action_rate.params["num_steps"] = 24 * 6000
-        self.curriculum.joint_vel_1.params["num_steps"] = 24 * 6000
-        self.curriculum.joint_vel_2.params["num_steps"] = 24 * 6000
-        self.curriculum.grab_spear.params["num_steps"] = 24 * 300
-        self.curriculum.grab_pole.params["num_steps"] = 24 * 300
+        self.curriculum.action_rate.params["num_steps"] = 24 * 20000
+        self.curriculum.joint_vel_1.params["num_steps"] = 24 * 20000
+        self.curriculum.joint_vel_2.params["num_steps"] = 24 * 20000
+        self.curriculum.grab_spear.params["num_steps"] = 24 * 10000
+        self.curriculum.grab_pole.params["num_steps"] = 24 * 10000
 
         # * events
         # self.events.reset_object_position.params["asset_cfg"].body_names = self.object_name
@@ -211,7 +215,7 @@ class AssembleWeaponEnvCfg(AssembleWeaponBaseEnvCfg):
 
 
 @configclass
-class AssembleWeaponEnvCfg_PLAY(AssembleWeaponEnvCfg):
+class AssembleWeaponDualEnvCfg_PLAY(AssembleWeaponDualEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()

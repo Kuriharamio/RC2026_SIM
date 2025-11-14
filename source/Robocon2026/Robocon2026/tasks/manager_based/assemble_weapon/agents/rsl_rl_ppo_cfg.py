@@ -74,8 +74,8 @@ class AssembleWeaponPPORunnerCfg(AssembleWeaponRslRlOnPolicyRunnerCfg):
         init_noise_std=1.0,
         actor_obs_normalization=False,
         critic_obs_normalization=False,
-        actor_hidden_dims=[512, 256, 256],
-        critic_hidden_dims=[512, 256, 256],
+        actor_hidden_dims=[256, 128, 64],
+        critic_hidden_dims=[256, 128, 64],
         activation="elu",
         enable_resnet_encoder=False,
         # img_obs_keys=["rgb"],
@@ -97,3 +97,22 @@ class AssembleWeaponPPORunnerCfg(AssembleWeaponRslRlOnPolicyRunnerCfg):
         desired_kl=0.01,
         max_grad_norm=1.0,
     )
+
+class AssembleWeaponDualPPORunnerCfg(AssembleWeaponPPORunnerCfg):
+
+    save_interval = 100
+    obs_groups = {"policy": ["policy", "privilege"]}
+    def __post_init__(self):
+        super().__post_init__()
+        self.experiment_name = "assemble_weapon_dual"
+        self.max_iterations = 30000
+
+
+class AssembleWeaponSinglePPORunnerCfg(AssembleWeaponPPORunnerCfg):
+
+    obs_groups = {"policy": ["policy", "privilege"]}
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.experiment_name = "assemble_weapon_single"
+        self.max_iterations = 30000
