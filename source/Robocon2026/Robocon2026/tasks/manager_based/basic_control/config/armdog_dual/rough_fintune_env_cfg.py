@@ -11,22 +11,22 @@ from isaaclab.utils import configclass
 ##
 # Pre-defined configs
 ##
-from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
+from Robocon2026.robots.armdog_dual import ARMDOG_DUAL_CFG
 from Robocon2026.tasks.manager_based.basic_control.basic_control_env_cfg import BasicControlEnvCfg
 
 
 @configclass
-class ArmDogRoughEnvCfg(BasicControlEnvCfg):
+class ArmDogDualRoughFintuneEnvCfg(BasicControlEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
-        self.scene.num_envs = 3072
+        self.scene.num_envs = 2048
 
         # assets
-        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/ArmDog/base"
-
-        # observations
-        self.observations.policy = None
+        self.scene.robot = ARMDOG_DUAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
+        # terminations
+        self.terminations.arm_contact = None
 
         # rewards
         # 奖励机器人跟踪xy平面线速度命令的表现
@@ -54,7 +54,7 @@ class ArmDogRoughEnvCfg(BasicControlEnvCfg):
         # # 惩罚关节位置偏差
         self.rewards.dof_pos_error.weight = -0.0
         # 惩罚足部撞击垂直表面（绊倒）
-        self.rewards.feet_stumble.weight=-0.25
+        self.rewards.feet_stumble.weight = -0.25
         # 惩罚高度过低过高的行为
         self.rewards.base_height_penalty.weight = -0.1
         # 惩罚接近关节位置极限的情况
@@ -64,7 +64,7 @@ class ArmDogRoughEnvCfg(BasicControlEnvCfg):
 
 
 @configclass
-class ArmDogRoughEnvCfg_PLAY(ArmDogRoughEnvCfg):
+class ArmDogDualRoughFinetuneEnvCfg_PLAY(ArmDogDualRoughFintuneEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -73,21 +73,18 @@ class ArmDogRoughEnvCfg_PLAY(ArmDogRoughEnvCfg):
         self.scene.num_envs = 50
         self.scene.env_spacing = 2.5
         # spawn the robot randomly in the grid (instead of their terrain levels)
-        if self.scene.terrain is not None:
-            self.scene.terrain.max_init_terrain_level = None
-            # reduce the number of terrains to save memory
-            if self.scene.terrain.terrain_generator is not None:
-                self.scene.terrain.terrain_generator.num_rows = 5
-                self.scene.terrain.terrain_generator.num_cols = 5
-                self.scene.terrain.terrain_generator.curriculum = False
+        self.scene.terrain.max_init_terrain_level = None
+        # reduce the number of terrains to save memory
+        if self.scene.terrain.terrain_generator is not None:
+            self.scene.terrain.terrain_generator.num_rows = 5
+            self.scene.terrain.terrain_generator.num_cols = 5
+            self.scene.terrain.terrain_generator.curriculum = False
 
         # disable randomization for play
+        self.observations.policy.enable_corruption = False
         self.observations.privilege.enable_corruption = False
         # remove random pushing event
         self.events.base_external_force_torque = None
         self.events.push_robot = None
-
-        self.commands.base_velocity.ranges.lin_vel_x = (0.1, 1.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
-        self.commands.base_velocity.ranges.heading = (0.0, 0.0)
+        # terminations
+        self.terminations.arm_contact = None

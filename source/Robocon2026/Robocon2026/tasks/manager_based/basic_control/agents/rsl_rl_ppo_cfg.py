@@ -15,7 +15,7 @@ from isaaclab_rl.rsl_rl import (
 )
 
 @configclass
-class ArmDogRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 15000
     save_interval = 50
@@ -46,7 +46,7 @@ class ArmDogRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
-class ArmDogFlatPPORunnerCfg(ArmDogRoughPPORunnerCfg):
+class FlatPPORunnerCfg(RoughPPORunnerCfg):
 
     obs_groups = {"policy": ["policy"]}
     def __post_init__(self):
@@ -63,7 +63,7 @@ class ArmDogFlatPPORunnerCfg(ArmDogRoughPPORunnerCfg):
 
 
 @configclass
-class ArmDogRoughDistillationRunnerCfg(ArmDogRoughPPORunnerCfg):
+class RoughDistillationRunnerCfg(RoughPPORunnerCfg):
     num_steps_per_env = 24
     max_iterations = 10000
     save_interval = 100
@@ -103,7 +103,7 @@ class ArmDogRoughDistillationRunnerCfg(ArmDogRoughPPORunnerCfg):
 
 
 @configclass
-class ArmDogRoughStudentPPORunnerCfg(ArmDogRoughPPORunnerCfg):
+class RoughStudentPPORunnerCfg(RoughPPORunnerCfg):
     obs_groups = {"policy": ["policy"], "critic": ["privilege"]}
     policy = RslRlPpoActorCriticRecurrentCfg(
         class_name="ActorCriticRecurrent",

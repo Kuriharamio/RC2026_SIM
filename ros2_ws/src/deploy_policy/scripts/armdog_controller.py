@@ -145,10 +145,10 @@ class ArmDogController(Node):
 
         self.action_length = len(self.default_pos)
         self._action_scale = [
-            0.125, 0.25, 0.25,
-            0.125, 0.25, 0.25,
-            0.125, 0.25, 0.25,
-            0.125, 0.25, 0.25
+            0.25, 0.25, 0.25,
+            0.25, 0.25, 0.25,
+            0.25, 0.25, 0.25,
+            0.25, 0.25, 0.25
         ]
         self._previous_action = np.zeros(self.action_length)
 
@@ -186,7 +186,7 @@ class ArmDogController(Node):
         self._joint_command.name = self.joint_names
 
         # Compute final joint positions by adding scaled actions to default positions
-        action_pos = self.default_pos + np.clip(self.action, -100.0, 100.0) * self._action_scale
+        action_pos = self.default_pos + np.clip(self.action, -1000.0, 1000.0) * self._action_scale
         # action_pos[8:10], action_pos[14:24] = np.zeros(2), np.zeros(10)
         self._joint_command.position = action_pos.tolist()
         self._joint_command.velocity = np.zeros(len(self.joint_names)).tolist()
@@ -229,16 +229,16 @@ class ArmDogController(Node):
         )
 
         # Initialize observation vector
-        obs = np.zeros(3 + 3 + 3 + self.action_length*3)
+        obs = np.zeros(3 + 3 + 3 + 3 + self.action_length*3)
 
         idx = 0
         # Fill observation vector components:
         # Base linear velocity (3)
-        # obs[idx : idx + 3] = self.base_lin_vel
-        # idx += 3
+        obs[idx : idx + 3] = self.base_lin_vel
+        idx += 3
 
         # Base angular velocity (3)
-        obs[idx : idx + 3] = base_ang_vel * 0.25
+        obs[idx : idx + 3] = base_ang_vel
         idx += 3
 
         # # Base linear acceleration (3)
@@ -274,14 +274,14 @@ class ArmDogController(Node):
         idx += self.action_length
 
         # Store joint velocities
-        obs[idx : idx + self.action_length] = joint_vel * 0.05
+        obs[idx : idx + self.action_length] = joint_vel
         idx += self.action_length
 
         # Store previous actions
-        obs[idx : idx + self.action_length] = self._previous_action
+        obs[idx : idx + self.action_length] = np.clip(self._previous_action, -50.0, 50.0)
         idx += self.action_length
 
-        return np.clip(obs, -100.0, 100.0)
+        return obs
 
     def _compute_action(self, obs):
         # Run inference with the PyTorch policy

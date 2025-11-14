@@ -11,25 +11,28 @@ from isaaclab.utils import configclass
 ##
 # Pre-defined configs
 ##
-from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
+from Robocon2026.robots.armdog_dual import ARMDOG_DUAL_CFG
 from Robocon2026.tasks.manager_based.basic_control.basic_control_env_cfg import BasicControlEnvCfg
 
 
 @configclass
-class ArmDogRoughDistillationEnvCfg(BasicControlEnvCfg):
+class ArmDogDualRoughDistillationEnvCfg(BasicControlEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
         self.scene.num_envs = 4096
 
         # assets
-        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/ArmDog/base"
+        self.scene.robot = ARMDOG_DUAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+        # assets
+        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
         # terminations
         self.terminations.arm_contact = None
 
 
 @configclass
-class ArmDogRoughDistillationEnvCfg_PLAY(ArmDogRoughDistillationEnvCfg):
+class ArmDogDualRoughDistillationEnvCfg_PLAY(ArmDogDualRoughDistillationEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()

@@ -48,11 +48,12 @@ UNITREE_GO2W_CFG = ArticulationCfg(
             damping=0.5,
             friction=0.0,
         ),
-        "foot_wheels": ImplicitActuatorCfg(
+        "foot_wheels": DCMotorCfg(
             joint_names_expr=[".*_foot_joint"],
             effort_limit=23.7,
+            saturation_effort=23.7,
             velocity_limit=30.0,
-            stiffness=25.0,
+            stiffness=0.0,
             damping=0.5,
             friction=0.0,
         ),

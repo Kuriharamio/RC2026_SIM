@@ -26,13 +26,6 @@ from . import mdp
 ##
 # Pre-defined configs
 ##
-# ? setting dogs
-# from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
-# from Robocon2026.robots.armdog_dual import ARMDOG_DUAL_CFG
-# from Robocon2026.robots.go2 import UNITREE_GO2_CFG
-# from Robocon2026.robots.pikadog import PIKADOG_CFG
-from Robocon2026.robots.go2w import UNITREE_GO2W_CFG
-
 from isaaclab.sensors import ImuCfg, CameraCfg, ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.terrains import TerrainImporterCfg
 from Robocon2026.map.terrains import TERRAINS_CFG
@@ -44,7 +37,7 @@ from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 ##
 @configclass
 class BasicControlSceneCfg(InteractiveSceneCfg):
-    """Configuration for the Armdog walking/basic_control scene."""
+    """Configuration for the Robot walking/basic_control scene."""
 
     # * 地形
     terrain = TerrainImporterCfg(
@@ -86,7 +79,7 @@ class BasicControlSceneCfg(InteractiveSceneCfg):
     # * 机器人及传感器
     robot: ArticulationCfg = MISSING
     height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/ArmDog/base",
+        prim_path="{ENV_REGEX_NS}/Robot/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
@@ -94,14 +87,14 @@ class BasicControlSceneCfg(InteractiveSceneCfg):
         mesh_prim_paths=["/World/ground"],
     )
     contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/ArmDog/.*",
+        prim_path="{ENV_REGEX_NS}/Robot/.*",
         history_length=10,
         track_air_time=True,
         debug_vis=True,
         update_period=0.0,
     )
     # imu = ImuCfg(
-    #     prim_path="{ENV_REGEX_NS}/ArmDog/imu",
+    #     prim_path="{ENV_REGEX_NS}/Robot/imu",
     #     debug_vis=True
     # )
 
@@ -137,7 +130,7 @@ class ActionsCfg:
         asset_name="robot",
         joint_names=[".*_foot_joint"],
         clip={".*_foot_joint": (-30.0, 30.0)},
-        scale=1.0,
+        scale=10.0,
         use_default_offset=True,
         preserve_order=True,
     )
@@ -369,7 +362,22 @@ class RewardsCfg:
     # 惩罚机器人偏离水平姿态
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1.5)
     # 惩罚关节加速度，鼓励平滑的动作
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    dof_acc_l2 = RewTerm(
+        func=mdp.joint_acc_l2,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+                    ".*L_hip_joint",
+                    ".*R_hip_joint",
+                    "F[L,R]_thigh_joint",
+                    "R[L,R]_thigh_joint",
+                    ".*_calf_joint",
+                ],
+            ),
+        },
+        weight=-2.5e-7,
+    )
     # 惩罚机器人身体部位与环境发生碰撞
     collision = RewTerm(
         func=mdp.undesired_contacts,
@@ -382,7 +390,22 @@ class RewardsCfg:
     # 惩罚动作变化率，鼓励动作的连续性和平滑性
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2_clip, weight=-0.01)
     # 惩罚关节力矩，鼓励节能的动作
-    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-2.0e-4)
+    dof_torques_l2 = RewTerm(
+        func=mdp.joint_torques_l2,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+                    ".*L_hip_joint",
+                    ".*R_hip_joint",
+                    "F[L,R]_thigh_joint",
+                    "R[L,R]_thigh_joint",
+                    ".*_calf_joint",
+                ],
+            ),
+        },
+        weight=-2.0e-4,
+    )
     # 奖励足部离地时间，鼓励机器人抬脚行走
     feet_air_time = RewTerm(
         func=mdp.feet_air_time,
@@ -446,7 +469,22 @@ class RewardsCfg:
             },
         )
     # 惩罚接近关节位置极限的情况
-    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-1.0)
+    dof_pos_limits = RewTerm(
+        func=mdp.joint_pos_limits,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+                    ".*L_hip_joint",
+                    ".*R_hip_joint",
+                    "F[L,R]_thigh_joint",
+                    "R[L,R]_thigh_joint",
+                    ".*_calf_joint",
+                ],
+            ),
+        },
+        weight=-1.0,
+    )
 
     # 惩罚足部滑行
     feet_slide = RewTerm(
@@ -576,12 +614,6 @@ class BasicControlEnvCfg(ManagerBasedRLEnvCfg):
             else:
                 if self.scene.terrain.terrain_generator is not None:
                     self.scene.terrain.terrain_generator.curriculum = False
-
-        # assets
-        self.scene.robot = UNITREE_GO2W_CFG.replace(prim_path="{ENV_REGEX_NS}/ArmDog")
-
-        # action scale
-        self.actions.joint_pos.scale = 0.25
 
         # event
         self.events.push_robot = None
