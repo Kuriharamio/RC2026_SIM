@@ -17,7 +17,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.flat_ppo_env_cfg:GO2WFlatEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.flat_ppo_env_cfg:GO2WFlatEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlatPPORunnerCfg",
     },
 )
@@ -27,7 +27,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.flat_ppo_env_cfg:GO2WFlatEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.flat_ppo_env_cfg:GO2WFlatEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlatPPORunnerCfg",
     },
 )
@@ -37,7 +37,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.rough_ppo_env_cfg:GO2WRoughEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.rough_ppo_env_cfg:GO2WRoughEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPORunnerCfg",
     },
 )
@@ -47,7 +47,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.rough_ppo_env_cfg:GO2WRoughEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.rough_ppo_env_cfg:GO2WRoughEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPORunnerCfg",
     },
 )
@@ -57,7 +57,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.rough_distillation_env_cfg:GO2WRoughDistillationEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.rough_distillation_env_cfg:GO2WRoughDistillationEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughDistillationRunnerCfg",
     },
 )
@@ -67,7 +67,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.rough_distillation_env_cfg:GO2WRoughDistillationEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.rough_distillation_env_cfg:GO2WRoughDistillationEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughDistillationRunnerCfg",
     },
 )
@@ -77,7 +77,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.rough_fintune_env_cfg:GO2WRoughFintuneEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.rough_fintune_env_cfg:GO2WRoughFintuneEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughStudentPPORunnerCfg",
     },
 )
@@ -87,7 +87,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.go2w.rough_fintune_env_cfg:GO2WRoughFinetuneEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.rough_fintune_env_cfg:GO2WRoughFinetuneEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughStudentPPORunnerCfg",
     },
 )
