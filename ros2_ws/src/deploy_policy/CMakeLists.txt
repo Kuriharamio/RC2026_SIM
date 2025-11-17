@@ -16,6 +16,7 @@ install(DIRECTORY
 # Install Python executables
 install(PROGRAMS
   scripts/armdog_controller.py
+  scripts/go2w_controller.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

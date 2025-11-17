@@ -23,7 +23,7 @@ gym.register(
 )
 
 gym.register(
-    id="Template-Basic-Control-Flat-Play-GO2W-v0",
+    id="Template-Basic-Control-Flat-GO2W-Play-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -43,7 +43,7 @@ gym.register(
 )
 
 gym.register(
-    id="Template-Basic-Control-Rough-Play-GO2W-v0",
+    id="Template-Basic-Control-Rough-GO2W-Play-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -63,7 +63,7 @@ gym.register(
 )
 
 gym.register(
-    id="Template-Basic-Control-Rough-Distillation-Play-GO2W-v0",
+    id="Template-Basic-Control-Rough-Distillation-GO2W-Play-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -83,7 +83,7 @@ gym.register(
 )
 
 gym.register(
-    id="Template-Basic-Control-Rough-Finetune-Play-GO2W-v0",
+    id="Template-Basic-Control-Rough-Finetune-GO2W-Play-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={

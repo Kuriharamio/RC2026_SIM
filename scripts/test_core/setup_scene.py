@@ -52,7 +52,7 @@ class SceneCfg(InteractiveSceneCfg):
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(
             intensity=750.0,
-            texture_file="assets/Matrials/kloofendal_43d_clear_puresky_4k.hdr",
+            texture_file="assets/Materials/kloofendal_43d_clear_puresky_4k.hdr",
         ),
     )
     #* 创建 Robocon 2026 地图
@@ -74,7 +74,7 @@ class SceneCfg(InteractiveSceneCfg):
     #         dynamic_friction=1.0,
     #     ),
     #     visual_material=sim_utils.MdlFileCfg(
-    #         mdl_path=f"assets/Matrials/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
+    #         mdl_path=f"assets/Materials/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
     #         project_uvw=True,
     #         texture_scale=(0.25, 0.25),
     #     ),

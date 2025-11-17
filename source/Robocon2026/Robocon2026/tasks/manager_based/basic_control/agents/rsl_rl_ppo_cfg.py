@@ -20,7 +20,7 @@ class RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 15000
     save_interval = 50
     experiment_name = "armdog_basic_control_rough"
-    obs_groups = {"policy": ["privilege"]}
+    obs_groups = {"policy": ["policy"], "critic": ["privilege"]}
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_obs_normalization=False,
@@ -48,7 +48,7 @@ class RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class FlatPPORunnerCfg(RoughPPORunnerCfg):
 
-    obs_groups = {"policy": ["policy"]}
+    obs_groups = {"policy": ["policy"], "critic": ["privilege"]}
     def __post_init__(self):
         super().__post_init__()
 
@@ -86,11 +86,11 @@ class RoughDistillationRunnerCfg(RoughPPORunnerCfg):
     )
     algorithm = RslRlDistillationAlgorithmCfg(
         num_learning_epochs=5,
-        learning_rate=1e-5,
+        learning_rate=1e-3,
         gradient_length=5,
         max_grad_norm=0.5,
         optimizer="adam",
-        loss_type="huber",
+        loss_type="mse",
     )
 
     def __post_init__(self):

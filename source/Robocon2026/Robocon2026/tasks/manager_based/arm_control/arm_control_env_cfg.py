@@ -56,7 +56,7 @@ class ArmControlSceneCfg(InteractiveSceneCfg):
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(
             intensity=750.0,
-            texture_file="assets/Matrials/kloofendal_43d_clear_puresky_4k.hdr",
+            texture_file="assets/Materials/kloofendal_43d_clear_puresky_4k.hdr",
         ),
     )
     # * plane
