@@ -44,7 +44,7 @@ class GO2WController(Node):
         self._imu = Imu()
 
         self._policy_counter = 0
-        self._decimation = 4
+        self._decimation = 1
         self._last_tick_time = self.get_clock().now().nanoseconds * 1e-9
         self.base_lin_vel = np.zeros(3)
         self._dt = 0.0
@@ -82,9 +82,10 @@ class GO2WController(Node):
             5.0, 5.0, 5.0, 5.0,
         ]
         self._previous_action = np.zeros(self.action_length)
-        # 添加低通滤波器系数
-        self._filter_alpha = 0.3
+
+        self._filter_alpha = 1.0
         self._filtered_action = np.zeros(self.action_length)
+        self._filter_pre_action = np.zeros(self.action_length)
 
         self._logger.info("Go2W Controller initialized")
 
@@ -119,7 +120,7 @@ class GO2WController(Node):
         if self._policy_counter % self._decimation == 0:
             obs = self._compute_observation(joint_state, imu)
             self.action = self._compute_action(obs)
-            # 应用低通滤波器平滑action
+
             self._filtered_action = self._filter_alpha * self.action + (1 - self._filter_alpha) * self._previous_action
             self._previous_action = self._filtered_action.copy()
             self._policy_counter = 0
@@ -189,7 +190,7 @@ class GO2WController(Node):
             + 3
             + 3
             + self.action_length - 4
-            + self.action_length - 4
+            + self.action_length
             + self.action_length
         )
 
@@ -238,8 +239,8 @@ class GO2WController(Node):
         idx += self.action_length - 4
 
         # Store joint velocities
-        obs[idx : idx + self.action_length - 4] = np.clip(joint_vel[:-4] * 0.05, -100.0, 100.0)
-        idx += self.action_length - 4
+        obs[idx : idx + self.action_length] = np.clip(joint_vel * 0.05, -100.0, 100.0)
+        idx += self.action_length
 
         # Store previous actions
         obs[idx : idx + self.action_length] = np.clip(self._previous_action * 1.0, -100.0, 100.0)

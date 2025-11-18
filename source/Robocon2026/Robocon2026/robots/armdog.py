@@ -5,11 +5,11 @@ from Robocon2026.utils.utils import euler2quaternion
 import isaaclab.sim as sim_utils
 
 
-"""Configuration for the Pikadog robot: two SO101 arms fixed on a Unitree Go2."""
+"""Configuration for the Armdog robot:  SO101 arm fixed on a Unitree Go2W."""
 
-PIKADOG_CFG = ArticulationCfg(
+ARMDOG_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path="assets/ArmDog/pikadog.usd",
+        usd_path="assets/ArmDog/armdog.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -23,40 +23,34 @@ PIKADOG_CFG = ArticulationCfg(
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
             solver_position_iteration_count=4,
-            solver_velocity_iteration_count=4,
+            solver_velocity_iteration_count=0,
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.4),
+        pos=(0.0, 0.0, 0.45),
         # pos=(5.45, 5.575, 0.4),
         # rot=euler2quaternion([-90, 0, 0]),
         joint_pos={
-            # Go2腿部
+            # Go2W
             ".*L_hip_joint": 0.1,
             ".*R_hip_joint": -0.1,
             "F[L,R]_thigh_joint": 0.8,
             "R[L,R]_thigh_joint": 1.0,
             ".*_calf_joint": -1.5,
-            # 前臂
-            "front_shoulder_pan": 0.0,
-            "front_shoulder_lift": 0.0,
-            "front_elbow_flex": 0.0,
-            "front_wrist_flex": 0.0,
-            "front_wrist_roll": 0.0,
-            "front_gripper": 0.0,
-            # 后臂
-            "back_shoulder_pan": 0.0,
-            "back_shoulder_lift": 0.0,
-            "back_elbow_flex": 0.0,
-            "back_wrist_flex": 0.0,
-            "back_wrist_roll": 0.0,
-            "back_gripper": 0.0,
+            ".*_foot_joint": 0.0,
+            # SO-Arm101
+            "shoulder_pan": 0.0,
+            "shoulder_lift": 0.0,
+            "elbow_flex": 0.0,
+            "wrist_flex": 0.0,
+            "wrist_roll": 0.0,
+            "gripper": 0.0,
         },
         joint_vel={".*": 0.0},
     ),
     soft_joint_pos_limit_factor=0.9,
     actuators={
-        # Go2腿部
+        # Go2W
         "base_legs": DCMotorCfg(
             joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
             effort_limit=23.5,
@@ -66,43 +60,31 @@ PIKADOG_CFG = ArticulationCfg(
             damping=0.5,
             friction=0.0,
         ),
-        # 前臂
-        "front_arm": ImplicitActuatorCfg(
+        "foot_wheels": DCMotorCfg(
+            joint_names_expr=[".*_foot_joint"],
+            effort_limit=23.7,
+            saturation_effort=23.7,
+            velocity_limit=30.0,
+            stiffness=0.0,
+            damping=0.5,
+            friction=0.0,
+        ),
+        # SO-Arm101
+        "arm_joints": ImplicitActuatorCfg(
             joint_names_expr=[
-                "front_shoulder_pan",
-                "front_shoulder_lift",
-                "front_elbow_flex",
-                "front_wrist_flex",
-                "front_wrist_roll",
+                "shoulder_pan",
+                "shoulder_lift",
+                "elbow_flex",
+                "wrist_flex",
+                "wrist_roll",
             ],
             effort_limit_sim=10,
             velocity_limit_sim=10,
             stiffness=17.8,
             damping=0.60,
         ),
-        "front_gripper": ImplicitActuatorCfg(
-            joint_names_expr=["front_gripper"],
-            effort_limit_sim=10,
-            velocity_limit_sim=10,
-            stiffness=17.8,
-            damping=0.60,
-        ),
-        # 后臂
-        "back_arm": ImplicitActuatorCfg(
-            joint_names_expr=[
-                "back_shoulder_pan",
-                "back_shoulder_lift",
-                "back_elbow_flex",
-                "back_wrist_flex",
-                "back_wrist_roll",
-            ],
-            effort_limit_sim=10,
-            velocity_limit_sim=10,
-            stiffness=17.8,
-            damping=0.60,
-        ),
-        "back_gripper": ImplicitActuatorCfg(
-            joint_names_expr=["back_gripper"],
+        "gripper": ImplicitActuatorCfg(
+            joint_names_expr=["gripper"],
             effort_limit_sim=10,
             velocity_limit_sim=10,
             stiffness=17.8,

@@ -23,7 +23,7 @@ from . import mdp
 # Pre-defined configs
 ##
 from Robocon2026.map.kfs import create_KFS
-from Robocon2026.robots.armdog_dual import ARMDOG_CFG
+from Robocon2026.robots.armdog import ARMDOG_CFG
 from isaaclab.sensors import ImuCfg
 from isaaclab.sensors import CameraCfg
 ##

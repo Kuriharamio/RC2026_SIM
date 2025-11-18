@@ -13,19 +13,17 @@ from isaaclab.utils import configclass
 ##
 # Pre-defined configs
 ##
-from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
-from Robocon2026.tasks.manager_based.basic_control.basic_control_env_cfg import (
-    BasicControlEnvCfg,
-)
+from Robocon2026.robots.armdog import ARMDOG_CFG
+from Robocon2026.tasks.manager_based.basic_control.basic_control_env_cfg import BasicControlEnvCfg
 from Robocon2026.tasks.manager_based.basic_control.mdp import mdp
 
 
 @configclass
-class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
+class ArmDogRoughEnvCfg(BasicControlEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
-        self.scene.num_envs = 4096
+        self.scene.num_envs = 3072
 
         self.joint_names = [
             ".*L_hip_joint",
@@ -34,35 +32,42 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
             "R[L,R]_thigh_joint",
             ".*_calf_joint",
         ]
+        self.arm_joint_names = [
+            "shoulder_pan",
+            "shoulder_lift",
+            "elbow_flex",
+            "wrist_flex",
+            "wrist_roll",
+        ]
+        self.gripper_name = ["gripper"]
 
         # * assets
-        self.scene.robot = ARMDOG_SINGLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = ARMDOG_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
 
         # * observations
-        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = (
-            self.joint_names
-        )
-        self.observations.privilege.joint_pos.params["asset_cfg"].joint_names = (
-            self.joint_names
-        )
+        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names + self.gripper_name
+        self.observations.privilege.joint_pos.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names + self.gripper_name
         self.observations.policy.base_lin_vel.scale = 2.0
         self.observations.policy.base_ang_vel.scale = 0.25
         self.observations.policy.joint_pos.scale = 1.0
         self.observations.policy.joint_vel.scale = 0.05
         self.observations.policy.base_lin_vel = None
-        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = (
-            self.joint_names
-        )
 
         # * actions
-        self.actions.joint_pos.scale = {
-            ".*_hip_joint": 0.125,
-            "^(?!.*_hip_joint).*": 0.25,
-        }
+        self.actions.joint_pos.scale = {".*_hip_joint": 0.125, "^(?!.*_hip_joint).*": 0.25}
         self.actions.joint_pos.clip = {".*": (-100.0, 100.0)}
         self.actions.joint_pos.joint_names = self.joint_names
-        self.actions.wheel_vel = None
+
+        self.actions.wheel_vel.scale = 5.0
+        self.actions.wheel_vel.clip = {".*": (-100.0, 100.0)}
+        self.actions.wheel_vel.joint_names = [".*foot_joint"]
+
+        self.actions.arm_pos.scale = {".*": 0.25}
+        self.actions.arm_pos.clip = {".*": (-100.0, 100.0)}
+        self.actions.arm_pos.joint_names = self.arm_joint_names
+
+        self.actions.gripper_action.joint_names = self.gripper_name
 
         # * events
         self.events.randomize_reset_base.params = {
@@ -84,13 +89,9 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
             },
         }
         self.events.randomize_base_mass.params["asset_cfg"].body_names = ["base"]
-        self.events.randomize_other_mass.params["asset_cfg"].body_names = [
-            f"^(?!.*base).*"
-        ]
+        self.events.randomize_other_mass.params["asset_cfg"].body_names = [f"^(?!.*base).*"]
         self.events.randomize_com_positions.params["asset_cfg"].body_names = ["base"]
-        self.events.randomize_external_force_torque.params["asset_cfg"].body_names = [
-            "base"
-        ]
+        self.events.randomize_external_force_torque.params["asset_cfg"].body_names = ["base"]
 
         # * rewards
         # General
@@ -108,21 +109,24 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
 
         # Joint penalties
         self.rewards.joint_torques_l2.weight = -2.5e-5
-        self.rewards.joint_torques_l2.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.joint_torques_l2.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names
         self.rewards.joint_vel_l2.weight = 0
-        self.rewards.joint_vel_l2.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.joint_vel_l2.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names
         self.rewards.joint_acc_l2.weight = -2.5e-7
-        self.rewards.joint_acc_l2.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.joint_acc_l2.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names
         self.rewards.joint_pos_limits.weight = -5.0
-        self.rewards.joint_pos_limits.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.joint_pos_limits.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names
+        self.rewards.joint_vel_limits.weight = 0
+        self.rewards.joint_vel_limits.params["asset_cfg"].joint_names = ".*_foot_joint"
         self.rewards.joint_power.weight = -2e-5
-        self.rewards.joint_power.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.joint_power.params["asset_cfg"].joint_names = self.joint_names + self.arm_joint_names
         self.rewards.stand_still.weight = -2.0
         self.rewards.stand_still.params["asset_cfg"].joint_names = self.joint_names
         self.rewards.joint_pos_penalty.weight = -1.0
-        self.rewards.joint_pos_penalty.params["asset_cfg"].joint_names = (
-            self.joint_names
-        )
+        self.rewards.joint_pos_penalty.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.wheel_vel_penalty.weight = 0
+        self.rewards.wheel_vel_penalty.params["sensor_cfg"].body_names = [".*_foot"]
+        self.rewards.wheel_vel_penalty.params["asset_cfg"].joint_names = ".*_foot_joint"
         self.rewards.joint_mirror.weight = -0.05
         self.rewards.joint_mirror.params["mirror_joints"] = [
             ["FR_(hip|thigh|calf).*", "RL_(hip|thigh|calf).*"],
@@ -134,9 +138,7 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
 
         # Contact sensor
         self.rewards.undesired_contacts.weight = -1.0
-        self.rewards.undesired_contacts.params["sensor_cfg"].body_names = [
-            f"^(?!.*(.*_foot)).*"
-        ]
+        self.rewards.undesired_contacts.params["sensor_cfg"].body_names = [f"^(?!.*(.*_foot)).*"]
         self.rewards.contact_forces.weight = -1.5e-4
         self.rewards.contact_forces.params["sensor_cfg"].body_names = [".*_foot"]
 
@@ -151,9 +153,7 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
         self.rewards.feet_contact.weight = 0
         self.rewards.feet_contact.params["sensor_cfg"].body_names = [".*_foot"]
         self.rewards.feet_contact_without_cmd.weight = 0.1
-        self.rewards.feet_contact_without_cmd.params["sensor_cfg"].body_names = [
-            ".*_foot"
-        ]
+        self.rewards.feet_contact_without_cmd.params["sensor_cfg"].body_names = [".*_foot"]
         self.rewards.feet_stumble.weight = 0
         self.rewards.feet_stumble.params["sensor_cfg"].body_names = [".*_foot"]
         self.rewards.feet_slide.weight = 0
@@ -166,10 +166,7 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
         self.rewards.feet_height_body.params["target_height"] = -0.2
         self.rewards.feet_height_body.params["asset_cfg"].body_names = [".*_foot"]
         self.rewards.feet_gait.weight = 0
-        self.rewards.feet_gait.params["synced_feet_pair_names"] = (
-            ("FL_foot", "RR_foot"),
-            ("FR_foot", "RL_foot"),
-        )
+        self.rewards.feet_gait.params["synced_feet_pair_names"] = (("FL_foot", "RR_foot"), ("FR_foot", "RL_foot"))
         self.rewards.upward.weight = 1.0
 
         self.disable_zero_weight_rewards()
@@ -182,7 +179,7 @@ class ArmDogSingleRoughEnvCfg(BasicControlEnvCfg):
 
 
 @configclass
-class ArmDogSingleRoughEnvCfg_PLAY(ArmDogSingleRoughEnvCfg):
+class ArmDogRoughEnvCfg_PLAY(ArmDogRoughEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()

@@ -10,15 +10,12 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState, Imu
 from message_filters import Subscriber, TimeSynchronizer
 
-class ArmDogController(Node):
+class Go2Controller(Node):
     def __init__(self):
-        super().__init__('armdog_controller')
+        super().__init__('go2_controller')
 
         self.declare_parameter('policy_path', 'policy/policy_1/exported/policy.pt')
-        self.declare_parameter('dog_type', 'none')
         self.set_parameters([rclpy.parameter.Parameter('use_sim_time', rclpy.Parameter.Type.BOOL, True)])
-
-        self.dog_type = self.get_parameter('dog_type').get_parameter_value().string_value
 
         self._logger = self.get_logger()
 
@@ -29,9 +26,9 @@ class ArmDogController(Node):
         )
 
         self._cmd_vel_subscription = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_callback, 10)
-        self._joint_publisher = self.create_publisher(JointState, f'joint_command_{self.dog_type}', sim_qos_profile)
-        self._imu_sub_filter = Subscriber(self, Imu, f'imu_{self.dog_type}', qos_profile=sim_qos_profile)
-        self._joint_states_sub_filter = Subscriber(self, JointState, f'joint_states_{self.dog_type}', qos_profile=sim_qos_profile)
+        self._joint_publisher = self.create_publisher(JointState, f'joint_command', sim_qos_profile)
+        self._imu_sub_filter = Subscriber(self, Imu, f'imu', qos_profile=sim_qos_profile)
+        self._joint_states_sub_filter = Subscriber(self, JointState, f'joint_states', qos_profile=sim_qos_profile)
 
         queue_size = 10
         subscribers = [self._joint_states_sub_filter, self._imu_sub_filter]
@@ -52,15 +49,10 @@ class ArmDogController(Node):
         self.base_lin_vel = np.zeros(3)
         self._dt = 0.0
 
-      
         self.default_pos = np.array([
             0.1, 0.1, -0.1, -0.1, 
             0.8, 0.8, 1.0, 1.0,
-            0.0, 
             -1.5, -1.5, -1.5, -1.5,
-            0.0, 0.0, 
-            0.0, 0.0, 
-            0.0, 
         ])
         self.joint_names = [
             "FL_hip_joint",
@@ -71,26 +63,17 @@ class ArmDogController(Node):
             "FR_thigh_joint",
             "RL_thigh_joint",
             "RR_thigh_joint",
-            "shoulder_pan",
             "FL_calf_joint",
             "FR_calf_joint",
             "RL_calf_joint",
             "RR_calf_joint",
-            "shoulder_lift",
-            "elbow_flex",
-            "wrist_flex",
-            "wrist_roll",
-            "gripper",
         ]
         self._action_scale = [
             0.125, 0.125, 0.125, 0.125, 
             0.25, 0.25, 0.25, 0.25, 
-            0.25, 0.25, 0.25, 0.25,
-            0.25, 0.25, 0.25, 0.25,
-            1.0,
+            0.25, 0.25, 0.25, 0.25
         ]
         
-
         self.action_length = len(self.default_pos)
         self._previous_action = np.zeros(self.action_length)
 
@@ -98,7 +81,7 @@ class ArmDogController(Node):
         self._filtered_action = np.zeros(self.action_length)
         self._filter_pre_action = np.zeros(self.action_length)
 
-        self._logger.info("ArmDogController initialized")
+        self._logger.info("Go2Controller initialized")
 
     def load_policy(self):
         # Load policy from file to io.BytesIO object
@@ -288,7 +271,7 @@ class ArmDogController(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ArmDogController()
+    node = Go2Controller()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

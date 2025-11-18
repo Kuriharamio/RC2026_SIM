@@ -24,7 +24,7 @@ UNITREE_GO2W_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.4),
+        pos=(0.0, 0.0, 0.45),
         # pos=(5.45, 5.575, 0.4),
         # rot=euler2quaternion([-90, 0, 0]),
         joint_pos={

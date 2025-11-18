@@ -45,7 +45,6 @@ class GO2WRoughEnvCfg(BasicControlEnvCfg):
         self.observations.policy.joint_pos.scale = 1.0
         self.observations.policy.joint_vel.scale = 0.05
         self.observations.policy.base_lin_vel = None
-        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = self.joint_names
 
         # * actions
         self.actions.joint_pos.scale = {".*_hip_joint": 0.125, "^(?!.*_hip_joint).*": 0.25}
@@ -54,6 +53,9 @@ class GO2WRoughEnvCfg(BasicControlEnvCfg):
         self.actions.wheel_vel.clip = {".*": (-100.0, 100.0)}
         self.actions.joint_pos.joint_names = self.joint_names
         self.actions.wheel_vel.joint_names = ['.*foot_joint']
+        self.actions.arm_pos = None
+        self.actions.gripper_action = None
+
 
         # * events
         self.events.randomize_reset_base.params = {

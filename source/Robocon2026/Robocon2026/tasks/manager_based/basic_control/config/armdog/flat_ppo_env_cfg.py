@@ -11,11 +11,11 @@ from isaaclab.utils import configclass
 ##
 # Pre-defined configs
 ##
-from Robocon2026.tasks.manager_based.basic_control.config.armdog_dual.rough_ppo_env_cfg import ArmDogDualRoughEnvCfg
+from Robocon2026.tasks.manager_based.basic_control.config.go2w.rough_ppo_env_cfg import GO2WRoughEnvCfg
 
 
 @configclass
-class ArmDogDualFlatEnvCfg(ArmDogDualRoughEnvCfg):
+class GO2WFlatEnvCfg(GO2WRoughEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -34,7 +34,7 @@ class ArmDogDualFlatEnvCfg(ArmDogDualRoughEnvCfg):
 
 
 
-class ArmDogDualFlatEnvCfg_PLAY(ArmDogDualFlatEnvCfg):
+class GO2WFlatEnvCfg_PLAY(GO2WFlatEnvCfg):
     def __post_init__(self) -> None:
         # post init of parent
         super().__post_init__()

@@ -76,12 +76,12 @@ tests/
 **/log/
 **/install/
 
-**.pt
+# **.pt
 **.hdr
 **.exr
 **.mdl
 **.onnx
 **.pkl
-**.yaml
+# **.yaml
 textures/
 Materials/

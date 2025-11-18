@@ -123,6 +123,22 @@ class ActionsCfg:
         preserve_order=True,
     )
 
+    arm_pos = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[".*"],
+        scale=0.5,
+        use_default_offset=True,
+        clip=None,
+        preserve_order=True,
+    )
+
+    gripper_action = mdp.BinaryJointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[".*gripper"],
+        open_command_expr={".*gripper": 0.9},
+        close_command_expr={".*gripper": -0.0},
+    )
+
 
 @configclass
 class ObservationsCfg:

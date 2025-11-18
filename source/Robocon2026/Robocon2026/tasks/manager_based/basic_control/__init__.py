@@ -13,5 +13,4 @@ from . import agents
 
 from .config import go2w
 from .config import go2
-from .config import armdog_dual
-from .config import armdog_single
+from .config import armdog

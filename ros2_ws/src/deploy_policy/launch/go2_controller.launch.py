@@ -9,7 +9,7 @@ import os
 def generate_launch_description():
     policy_path = os.path.join(
         get_package_share_directory('deploy_policy'),
-        'policy/armdog/rough/exported/policy.pt'
+        'policy/go2/rough/exported/policy.pt'
     )
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -22,8 +22,8 @@ def generate_launch_description():
             description="Use simulation (Omniverse Isaac Sim) clock if true"),
         Node(
             package='deploy_policy',
-            executable='armdog_controller.py',
-            name='armdog_controller',
+            executable='go2_controller.py',
+            name='go2_controller',
             output="screen",
             parameters=[{
                 'policy_path': LaunchConfiguration('policy_path'),

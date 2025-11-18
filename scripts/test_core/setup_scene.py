@@ -21,7 +21,7 @@ from Robocon2026.map.kfs import create_KFS
 from Robocon2026.robots.dofbot import DOFBOT_CONFIG
 from Robocon2026.robots.go2 import UNITREE_GO2_CFG
 from Robocon2026.robots.jetbot import JETBOT_CFG
-from Robocon2026.robots.armdog_single import ARMDOG_SINGLE_CFG
+from Robocon2026.robots.armdog import ARMDOG_SINGLE_CFG
 from Robocon2026.utils.utils import euler2quaternion
 from isaaclab.sensors import ImuCfg, CameraCfg, ContactSensorCfg
 
