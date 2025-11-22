@@ -15,6 +15,7 @@ class GO2WController(Node):
         super().__init__('go2w_controller')
 
         self.declare_parameter('policy_path', 'policy/policy_1/exported/policy.pt')
+        self.declare_parameter('control_frequency', 0.005)
         self.set_parameters([rclpy.parameter.Parameter('use_sim_time', rclpy.Parameter.Type.BOOL, True)])
 
         self._logger = self.get_logger()
@@ -36,6 +37,8 @@ class GO2WController(Node):
         self._sync.registerCallback(self.synchronized_callback)
 
         self.policy_path = self.get_parameter('policy_path').get_parameter_value().string_value
+
+        self.control_frequency = self.get_parameter('control_frequency').get_parameter_value().double_value
         self.load_policy()
 
         self._joint_state = JointState()
@@ -83,7 +86,7 @@ class GO2WController(Node):
         ]
         self._previous_action = np.zeros(self.action_length)
 
-        self._filter_alpha = 1.0
+        self._filter_alpha = 0.1
         self._filtered_action = np.zeros(self.action_length)
         self._filter_pre_action = np.zeros(self.action_length)
 

@@ -1,0 +1,7 @@
+[submodule "ros2_ws/src/FAST_LIO"]
+	path = ros2_ws/src/FAST_LIO
+	url = https://github.com/Kuriharamio/FAST_LIO.git
+	branch = ROS2
+[submodule "ros2_ws/src/livox_ros_driver2"]
+	path = ros2_ws/src/livox_ros_driver2
+	url = https://github.com/Ericsii/livox_ros_driver2.git
