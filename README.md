@@ -37,7 +37,7 @@
 
 > - 输出如下（省略了 `Entry Point` 和 `Config`）
 >
->   ```bash
+>   ```python
 >   +---------------------------------------------------------------+
 >   |          Available Environments in Isaac Lab              	|
 >   +--------+------------------------------------------------------|
@@ -93,7 +93,7 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
 
 目前包含多种任务环境配置，主要包括：
 
-1. **四足狗  Go2 控制环境（BasicControlEnv）**：
+1. **四足控制环境（BasicControlEnv）**：
 
    - 基础步态控制
 
