@@ -141,15 +141,15 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
 
 ### 使用虚拟代理运行任务
 
-虚拟代理（输出零动作或随机动作）用于验证环境配置是否正确：
+虚拟 agent（输出零动作或随机动作）用于验证环境配置是否正确：
 
-- 零动作代理：
+- `zero_agent`：
 
   ```bash
   python scripts/zero_agent.py --task=<TASK_NAME>
   ```
 
-- 随机动作代理：
+- `random_agent`：
 
   ```bash
   python scripts/random_agent.py --task=<TASK_NAME>
@@ -185,7 +185,7 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
    ros2 run teleop_twist_keyboard teleop_twist_keyboard 
    ```
 
-5. 如果需要运行 FastLIO2，在这之后直接 launch 即可
+5. 如果需要运行 FastLIO2，在这之后直接 launch 即可（如果没有使用过，请遵循 [FaastLIO 安装](https://github.com/Kuriharamio/FAST_LIO/tree/ROS2?tab=readme-ov-file#1-prerequisites)）
 
    ```bash
    ros2 launch fast_lio mapping.launch.py config_file:=VLS.yaml
