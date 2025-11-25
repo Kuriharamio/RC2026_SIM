@@ -10,6 +10,12 @@
 
 ### 前置条件
 
+> [!important]
+>
+> 资产文件在百度网盘：
+>
+> 链接: https://pan.baidu.com/s/192W4uDKmPrswztege8Sm-A?pwd=5iff 提取码: 5iff
+
 1. 安装 Isaac Lab，遵循官方[安装指南](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html)
 
    - 推荐使用 conda 安装方式，便于从终端调用 Python 脚本
@@ -29,11 +35,38 @@
      python scripts/list_envs.py
      ```
 
-> [!important]
+> - 输出如下（省略了 `Entry Point` 和 `Config`）
 >
-> 资产文件在百度网盘：
->
-> 链接: https://pan.baidu.com/s/192W4uDKmPrswztege8Sm-A?pwd=5iff 提取码: 5iff
+>   ```bash
+>   +---------------------------------------------------------------+
+>   |          Available Environments in Isaac Lab              	|
+>   +--------+------------------------------------------------------|
+>   | S. No. | 					Task Name              		    	|
+>   +--------+------------------------------------------------------|
+>   |   1    | Template-Arm-Control-Lift-v0                       	|
+>   |   2    | Template-Arm-Control-Lift-Play-v0                 	|
+>   |   3    | Template-Arm-Control-Lift-Distillation-Vision-v0   	|
+>   |   4    | Template-Arm-Control-Lift-Distillation-Vision-Play-v0| 
+>   |   5    | Template-Arm-Control-Lift-Finetune-Vision-v0			|
+>   |   6    | Template-Arm-Control-Lift-Finetune-Vision-Play-v0	| 
+>   |   7    | Template-Assemble-Weapon-Dual-v0         			|     
+>   |   8    | Template-Assemble-Weapon-Dual-Play-v0             	|
+>   |   9    | Template-Assemble-Weapon-Single-v0                 	|
+>   |   10   | Template-Assemble-Weapon-Single-Play-v0           	|
+>   |   11   | Template-Basic-Control-Flat-GO2W-v0               	|
+>   |   12   | Template-Basic-Control-Flat-GO2W-Play-v0           	|
+>   |   13   | Template-Basic-Control-Rough-GO2W-v0               	|
+>   |   14   | Template-Basic-Control-Rough-GO2W-Play-v0         	|
+>   |   15   | Template-Basic-Control-Flat-GO2-v0                 	|
+>   |   16   | Template-Basic-Control-Flat-GO2-Play-v0           	|
+>   |   17   | Template-Basic-Control-Rough-GO2-v0               	|
+>   |   18   | Template-Basic-Control-Rough-GO2-Play-v0           	|
+>   |   19   | Template-Basic-Control-Flat-ArmDog-v0             	|
+>   |   20   | Template-Basic-Control-Flat-ArmDog-Play-v0         	|
+>   |   21   | Template-Basic-Control-Rough-ArmDog-v0             	|
+>   |   22   | Template-Basic-Control-Rough-ArmDog-Play-v0       	|
+>   +--------+------------------------------------------------------+
+>   ```
 
 ### IDE 设置
 
@@ -67,17 +100,22 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
      <img src="./README.assets/8359e1495b253a6bd45592a9fa76e827.jpg" alt="8359e1495b253a6bd45592a9fa76e827" style="zoom: 36%;" />
 
    ```python
-   id="Template-Basic-Control-Flat-v0"
-   id="Template-Basic-Control-Flat-Play-v0"
-   id="Template-Basic-Control-Rough-v0"
-   id="Template-Basic-Control-Rough-Play-v0"
-   id="Template-Basic-Control-Rough-Distillation-v0"
-   id="Template-Basic-Control-Rough-Distillation-Play-v0"
-   id="Template-Basic-Control-Rough-Finetune-v0"
-   id="Template-Basic-Control-Rough-Finetune-Play-v0"
+   ############################ GO2W ############################
+   |   11   | Template-Basic-Control-Flat-GO2W-v0               
+   |   12   | Template-Basic-Control-Flat-GO2W-Play-v0           
+   |   13   | Template-Basic-Control-Rough-GO2W-v0               
+   |   14   | Template-Basic-Control-Rough-GO2W-Play-v0    
+   ############################# GO2 ############################
+   |   15   | Template-Basic-Control-Flat-GO2-v0                 
+   |   16   | Template-Basic-Control-Flat-GO2-Play-v0           
+   |   17   | Template-Basic-Control-Rough-GO2-v0               
+   |   18   | Template-Basic-Control-Rough-GO2-Play-v0    
+   ######################## GO2W+SO-Arm101 ######################
+   |   19   | Template-Basic-Control-Flat-ArmDog-v0             
+   |   20   | Template-Basic-Control-Flat-ArmDog-Play-v0         
+   |   21   | Template-Basic-Control-Rough-ArmDog-v0             
+   |   22   | Template-Basic-Control-Rough-ArmDog-Play-v0 
    ```
-
-   
 
 2. **机械臂 SO-Arm-101 控制环境（ArmControlEnv）**：
 
@@ -86,14 +124,19 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
      <img src="./README.assets/3c77169a4373174927b6df8be7308698.jpg" alt="3c77169a4373174927b6df8be7308698" style="zoom: 40%;" />
 
    ```python
-   id="Template-Arm-Control-Lift-v0"
-   id="Template-Arm-Control-Lift-Play-v0"
-   id="Template-Arm-Control-Lift-Distillation-Vision-v0"
-   id="Template-Arm-Control-Lift-Distillation-Vision-Play-v0"
-   id="Template-Arm-Control-Lift-Finetune-Vision-v0"
-   id="Template-Arm-Control-Lift-Finetune-Vision-Play-v0"
+   ########################  SO-Arm101 夹取任务 ######################## 
+   |   1    | Template-Arm-Control-Lift-v0                       
+   |   2    | Template-Arm-Control-Lift-Play-v0                 
+   |   3    | Template-Arm-Control-Lift-Distillation-Vision-v0   
+   |   4    | Template-Arm-Control-Lift-Distillation-Vision-Play-v0 
+   |   5    | Template-Arm-Control-Lift-Finetune-Vision-v0
+   |   6    | Template-Arm-Control-Lift-Finetune-Vision-Play-v0 
+   ######################  组装武器，未测试，仅供参考 ###################### 
+   |   7    | Template-Assemble-Weapon-Dual-v0                   
+   |   8    | Template-Assemble-Weapon-Dual-Play-v0             
+   |   9    | Template-Assemble-Weapon-Single-v0                 
+   |   10   | Template-Assemble-Weapon-Single-Play-v0  
    ```
-
    
 
 ### 使用虚拟代理运行任务
@@ -112,7 +155,7 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
   python scripts/random_agent.py --task=<TASK_NAME>
   ```
 
-### ROS2 集成
+### ROS2 集成 （键盘控制 +  SLAM）
 
 项目包含 ROS2 工作空间，用于部署训练好的策略：
 
@@ -127,14 +170,12 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
 2. 运行控制器节点：
 
    ```bash
-   ros2 launch deploy_policy armdog_controller.launch.py
+   ros2 launch deploy_policy go2w_controller.launch.py
    ```
 
    可配置参数：
 
    - `policy_path`：策略文件路径
-   - `use_sim_time`：是否使用仿真时间，默认 True
-   - `dog_type`：机器人类型（none/single/dual），默认 none
 
 3. 打开仿真场景并启动（assets/Simulation/sim.usd）
 
@@ -144,4 +185,15 @@ python scripts/rsl_rl/train.py --task=<TASK_NAME>
    ros2 run teleop_twist_keyboard teleop_twist_keyboard 
    ```
 
-<img src="./README.assets/7fd61a23226388e60bc7f0943abdec0e.jpg" alt="7fd61a23226388e60bc7f0943abdec0e" style="zoom: 33%;" />
+5. 如果需要运行 FastLIO2，在这之后直接 launch 即可
+
+   ```bash
+   ros2 launch fast_lio mapping.launch.py config_file:=VLS.yaml
+   ```
+
+<img src="./README.assets/image-20251125132947954.png" alt="image-20251125132947954" style="zoom:80%;" />
+
+<img src="./README.assets/image-20251125133427548.png" alt="image-20251125133427548" style="zoom:80%;" />
+
+
+
